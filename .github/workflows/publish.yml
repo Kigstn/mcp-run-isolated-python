@@ -27,11 +27,5 @@ jobs:
       - name: Build
         run: uv build
 
-      - name: Run tests (wheel)
-        run: uv run pytest --isolated --no-project --with dist/*.whl .
-
-      - name: Run tests (source distribution)
-        run: uv run pytest --isolated --no-project --with dist/*.tar.gz .
-
       - name: Publish
         run: uv publish

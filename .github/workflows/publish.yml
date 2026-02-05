@@ -27,12 +27,11 @@ jobs:
       - name: Build
         run: uv build
 
-      # Check that basic features work and we didn't miss to include crucial files
-      - name: Smoke test (wheel)
-        run: uv run --isolated --no-project --with dist/*.whl pytest .
+      - name: Run tests (wheel)
+        run: uv run pytest --isolated --no-project --with dist/*.whl .
 
-      - name: Smoke test (source distribution)
-        run: uv run --isolated --no-project --with dist/*.tar.gz pytest .
+      - name: Run tests (source distribution)
+        run: uv run pytest --isolated --no-project --with dist/*.tar.gz .
 
       - name: Publish
         run: uv publish

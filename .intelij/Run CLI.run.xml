@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run MCP server" type="UvRunConfigurationType" factoryName="UvRunConfigurationType">
+  <configuration default="false" name="Run CLI" type="UvRunConfigurationType" factoryName="UvRunConfigurationType">
     <option name="args">
       <list />
     </option>
@@ -8,7 +8,7 @@
       <map />
     </option>
     <option name="runType" value="SCRIPT" />
-    <option name="scriptOrModule" value="./src/mcp_run_isolated_python/mcp_server.py" />
+    <option name="scriptOrModule" value="./src/mcp_run_isolated_python/cli.py" />
     <option name="uvArgs">
       <list />
     </option>

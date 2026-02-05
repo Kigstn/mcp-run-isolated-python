@@ -1,6 +1,6 @@
 import typer
 
-from mcp_run_isolated_python.misc.logger import get_logger
+from mcp_run_isolated_python.log.logger import get_logger
 
 logger = get_logger(__name__)
 

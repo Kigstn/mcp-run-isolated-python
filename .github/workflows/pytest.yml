@@ -1,0 +1,30 @@
+name: Pytest
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup_python_environment
+
+      - name: Test with Pytest
+        run: |
+          # install pytest sugar for nicer logs
+          uv pip install pytest-sugar
+          
+          uv run --frozen pytest . --force-sugar --color=yes --disable-warnings -qq -r fE
+  

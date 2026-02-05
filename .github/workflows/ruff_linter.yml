@@ -1,0 +1,25 @@
+name: Ruff Linter
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  ruff_linter:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup_python_environment
+
+      - name: Run Ruff Linter
+        run: uv run ruff check --output-format=github .

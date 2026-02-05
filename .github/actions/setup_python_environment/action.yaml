@@ -1,0 +1,13 @@
+name: Setup Python Environment
+description: Sets up python environment
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set up `uv`
+      uses: astral-sh/setup-uv@v7
+
+    - name: Install requirements
+      shell: bash
+      run: uv sync --all-extras --dev

@@ -1,0 +1,25 @@
+name: Ruff Formater
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  ruff_format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup_python_environment
+
+      - name: Run Ruff Formater
+        run: uv run ruff format --check .

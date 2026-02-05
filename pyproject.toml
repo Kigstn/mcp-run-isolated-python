@@ -1,11 +1,11 @@
 [project]
-name = "TEMP_NAME"                  # todo: name
-version = "0.0.0"
+name = "mcp-run-isolated-python"
+version = "0.0.1"
 description = "WIP and TODO :)"     # todo: description
 authors = [{ name = "Daniel J" }]
 license = { file = "LICENCE" }
 readme = "README.md"
-requires-python = "~= 3.14.2"
+requires-python = ">=3.10"
 
 dependencies = [
     "pydantic>=2.12.5",
@@ -13,7 +13,7 @@ dependencies = [
     "rich>=14.3.2",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     # dev tools
     "ruff>=0.11.10",
@@ -26,11 +26,11 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Kigstn/TODO"   # todo: repo link
+Repository = "https://github.com/Kigstn/mcp-run-isolated-python"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9.30,<0.10.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 120
@@ -79,9 +79,3 @@ pythonpath = "."
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
-
-[dependency-groups]
-dev = [
-    "prek>=0.3.1",
-    "ty>=0.0.15",
-]

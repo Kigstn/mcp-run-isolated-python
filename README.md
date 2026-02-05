@@ -1,4 +1,4 @@
-# PythonTemplate
+# mcp-run-isolated-python
 
 [//]: # (todo: name & description)
 WIP and TODO :) 

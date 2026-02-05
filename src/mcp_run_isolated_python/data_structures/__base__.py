@@ -1,7 +1,6 @@
 import logging
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from TEMP_NAME.misc.logger import get_logger
 
 

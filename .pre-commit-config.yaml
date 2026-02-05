@@ -1,7 +1,6 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
-exclude: ".json"
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
@@ -11,7 +10,16 @@ repos:
       - id: ruff-check
         types_or: [ python, pyi, jupyter ]
         args: [ --fix ]
+        priority: 10
 
       # Run the formatter.
       - id: ruff-format
         types_or: [ python, pyi, jupyter ]
+        priority: 0
+
+  # Gitleaks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+        priority: 10

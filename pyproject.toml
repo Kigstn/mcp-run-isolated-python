@@ -1,5 +1,5 @@
 [project]
-name = "mcp-run-isolated-python"
+name = "mcp_run_isolated_python"
 version = "0.0.1"
 description = "WIP and TODO :)"     # todo: description
 authors = [{ name = "Daniel J" }]

@@ -1,20 +1,13 @@
 import logging
 
-import aiohttp
-import litestar
-import numpy
-import polars
 import pydantic
-import whenever
 from rich.logging import RichHandler
 
 logging.basicConfig(
     level="NOTSET",
     format="%(message)s",
     datefmt="[%X]",
-    handlers=[
-        RichHandler(rich_tracebacks=True, tracebacks_suppress=[aiohttp, polars, pydantic, whenever, numpy, litestar])
-    ],
+    handlers=[RichHandler(rich_tracebacks=True, tracebacks_suppress=[pydantic])],
 )
 
 _loggers = {}

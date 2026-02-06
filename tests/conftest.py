@@ -8,7 +8,7 @@ from mcp_run_isolated_python.utils.settings import Settings
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings()
+    return Settings.using_defaults()
 
 
 @pytest.fixture

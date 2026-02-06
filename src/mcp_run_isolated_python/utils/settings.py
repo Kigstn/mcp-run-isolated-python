@@ -1,26 +1,40 @@
 import logging
-import os
-from typing import Self
+from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class Settings(BaseModel):
-    transport: str = "http"
-    stateless: bool = True
-    port: int = 6400
-    host: str = "localhost"
-    path: str = "/mcp"
-    log_level: int = logging.INFO
+    transport: str
+    stateless: bool
+    port: int
+    host: str
+    path: str
+    code_timeout_seconds: int
 
-    code_timeout_seconds: int = 30
-    python_dependencies: list[str] = Field(default_factory=list)
-    path_to_python_interpreter: str = ""
+    log_level: int
+    path_to_python_interpreter: Path
+    path_to_srt_settings: Path
+
+    installed_python_dependencies: list[str] = Field(default_factory=list)
 
     @classmethod
-    def from_env_vars(cls) -> Self:
-        env_vars = {}
-        for field in cls.model_fields:
-            if env := os.getenv(f"MCP_RUN_ISOLATED_PYTHON_{field}".upper()):
-                env_vars[field] = env
-        return cls(**env_vars)
+    def using_defaults(cls) -> "Settings":
+        return cls(
+            transport="http",
+            stateless=True,
+            port=6400,
+            host="localhost",
+            path="/mcp",
+            log_level=logging.INFO,
+            code_timeout_seconds=30,
+            path_to_python_interpreter=Path.cwd() / ".venv" / "bin" / "python",
+            path_to_srt_settings=Path.cwd() / "default_srt_settings.json",
+        )
+
+    @field_validator("path_to_srt_settings", mode="after")
+    @classmethod
+    def _check_exists(cls, path: Path) -> Path:
+        if not path.exists():
+            raise ValidationError(f"{path} does not exist")
+        return path

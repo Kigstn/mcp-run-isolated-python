@@ -7,7 +7,7 @@ import structlog
 from mcp_run_isolated_python.log.otel import add_open_telemetry_spans
 
 
-def configure_logging():
+def configure_logging(log_level: int = logging.INFO):
     exception_formatter = structlog.dev.RichTracebackFormatter()
     exception_formatter.width = 180
     exception_formatter.suppress = [pydantic, fastmcp]
@@ -22,7 +22,7 @@ def configure_logging():
             add_open_telemetry_spans,
             structlog.dev.ConsoleRenderer(pad_event_to=60, exception_formatter=exception_formatter),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(logging.NOTSET),
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,

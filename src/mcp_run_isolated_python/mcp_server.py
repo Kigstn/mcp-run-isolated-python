@@ -13,6 +13,8 @@ logger = get_logger(__name__)
 
 name = "mcp_run_isolated_python"
 
+# todo tests
+
 
 def run_mcp(settings: Settings):
     @asynccontextmanager
@@ -32,7 +34,7 @@ def run_mcp(settings: Settings):
             - You do **not** have any access to the internet
             - The code will be executed with Python 3.13
             - You code must be executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
-            - You have these python packages installed: `${settings.python_dependencies}\
+            - You have these additional python packages installed: `${settings.installed_python_dependencies}\
             - To output files or images, save them in the "/output_files" folder
             """),
         )
@@ -41,6 +43,7 @@ def run_mcp(settings: Settings):
     logger.info(
         f"Starting MCP server `{name}` with transport {settings.transport!r} (Stateless: {settings.stateless}) on http://{settings.host}:{settings.port}{settings.path}"
     )
+    logger.info("Streaming logs from the MCP server:")
 
     mcp.run(
         transport=settings.transport,  # ty:ignore[invalid-argument-type]
@@ -53,5 +56,5 @@ def run_mcp(settings: Settings):
 
 
 if __name__ == "__main__":
-    settings = Settings.from_env_vars()
+    settings = Settings.using_defaults()
     run_mcp(settings=settings)

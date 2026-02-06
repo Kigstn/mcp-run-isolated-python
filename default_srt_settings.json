@@ -1,0 +1,12 @@
+{
+    "network": {
+        "allowedDomains": [],
+        "allowLocalBinding": false
+    },
+    "filesystem": {
+        "denyRead": ["*"],
+        "allowWrite": ["."],
+        "denyWrite": []
+    },
+    "enableWeakerNestedSandbox": false
+}

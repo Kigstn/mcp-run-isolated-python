@@ -12,7 +12,7 @@ dependencies = [
     "whenever>=0.9.5",
     "rich>=14.3.2",
     "typer>=0.21.1",
-    "fastmcp>=2.14.5",
+    "fastmcp>=3.0.0b1",
     "opentelemetry-api>=1.39.1",
     "structlog>=25.5.0",
 ]
@@ -23,7 +23,6 @@ dev = [
     "ruff>=0.11.10",
     "prek>=0.3.1",
     "ty>=0.0.15",
-
     # testing
     "pytest>=8.3.5",
     "pytest-asyncio>=0.24.0",
@@ -74,6 +73,10 @@ extend-ignore = [
     "RUF029",
 ]
 preview = true
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
+"**/test_*.py" = ["S101"]
 
 [tool.pytest.ini_options]
 # https://docs.pytest.org/en/latest/explanation/goodpractices.html

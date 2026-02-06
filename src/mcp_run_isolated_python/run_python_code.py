@@ -44,7 +44,8 @@ def run_python_code(
             "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
         )
 
-    logger.info("Running python code...")
+    logger.info("Running python code...", code=python_code, settings=settings.model_dump())  # ty:ignore[unknown-argument]
+
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as file:
         file.write(python_code)
         path = Path(file.name)
@@ -52,6 +53,9 @@ def run_python_code(
     try:
         cmd = f""""{py_executable}" "{path}" """
         p = subprocess.run(("srt", cmd), cwd=".", capture_output=True, timeout=settings.code_timeout_seconds)  # noqa: S603
+        logger.info(
+            "Command executed", cmd=cmd, stdout=p.stdout.decode(), stderr=p.stderr.decode(), returncode=p.returncode
+        )  # ty:ignore[unknown-argument]
     finally:
         # remove file always
         path.unlink()

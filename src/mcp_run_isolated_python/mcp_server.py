@@ -1,12 +1,10 @@
 import textwrap
-from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
 from fastmcp.tools import Tool
 
 from mcp_run_isolated_python.log.logger import get_logger
-from mcp_run_isolated_python.run_python_code import run_python_code
-from mcp_run_isolated_python.utils.mcp_context import CustomContext
+from mcp_run_isolated_python.run_python_code import CodeExecutor
 from mcp_run_isolated_python.utils.settings import Settings
 
 logger = get_logger(__name__)
@@ -17,14 +15,12 @@ name = "mcp_run_isolated_python"
 
 
 def run_mcp(settings: Settings):
-    @asynccontextmanager
-    async def lifespan(_: FastMCP):
-        yield CustomContext(settings=settings)
+    mcp = FastMCP(name=name)
+    code_executor = CodeExecutor(settings=settings)
 
-    mcp = FastMCP[CustomContext](name=name, lifespan=lifespan)
     mcp.add_tool(
         Tool.from_function(
-            run_python_code,
+            code_executor.run_python_code,
             description=textwrap.dedent(f"""
             Tool to execute Python code and return stdout, stderr, and return value.
     
@@ -35,7 +31,7 @@ def run_mcp(settings: Settings):
             - The code will be executed with Python 3.13
             - You code must be executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
             - You have these additional python packages installed: `${settings.installed_python_dependencies}\
-            - To output files or images, save them in the "/output_files" folder
+            - To output files or images, save them in the "./output" folder
             """),
         )
     )

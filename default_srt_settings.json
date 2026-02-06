@@ -1,10 +1,12 @@
 {
     "network": {
         "allowedDomains": [],
+        "deniedDomains": [],
+        "allowUnixSockets": [],
         "allowLocalBinding": false
     },
     "filesystem": {
-        "denyRead": ["*"],
+        "denyRead": [],
         "allowWrite": ["."],
         "denyWrite": []
     },

@@ -1,17 +1,18 @@
+import shutil
 import subprocess  # noqa: S404
-import tempfile
-from pathlib import Path
+import uuid
 from typing import Annotated, Literal
 
 from fastmcp import Context
+from fastmcp.utilities.types import Audio, File, Image
+from filetype import guess
+from filetype.types import AUDIO, IMAGE
 from pydantic import BaseModel
 
 from mcp_run_isolated_python.log.logger import get_logger
-from mcp_run_isolated_python.utils.mcp_context import get_settings
+from mcp_run_isolated_python.utils.settings import Settings
 
 logger = get_logger(__name__)
-
-_pre_check_succeeded: bool | None = None
 
 
 class CodeExecutionResult(BaseModel):
@@ -20,46 +21,77 @@ class CodeExecutionResult(BaseModel):
     error: str | None = None
 
 
-def run_python_code(
-    python_code: Annotated[str, "The python code to execute"],
-    ctx: Context,
-) -> CodeExecutionResult:
-    global _pre_check_succeeded
+class CodeExecutor(BaseModel):
+    settings: Settings
+    pre_check_succeeded: bool | None = None
 
-    settings = get_settings(context=ctx)
+    def run_python_code(
+        self,
+        python_code: Annotated[str, "The python code to execute"],
+        ctx: Context,
+    ) -> list[CodeExecutionResult | File | Image | Audio]:
+        if self.pre_check_succeeded is None:
+            logger.info("First run: Running pre-check to verify SRT CLI tool is available and working...")
+            p = subprocess.run(("srt", "python -c '1+1'"), capture_output=True)
+            self.pre_check_succeeded = p.returncode == 0
+            if self.pre_check_succeeded:
+                logger.info("Pre-check for SRT CLI tool succeeded!")
+            else:
+                logger.error("Pre-check for SRT CLI tool failed", return_code=p.returncode, stderr=p.stderr.decode())
 
-    if _pre_check_succeeded is None:
-        logger.info("First run: Running pre-check to verify SRT CLI tool is available and working...")
-        p = subprocess.run(("srt", "python -c '1+1'"), capture_output=True)
-        _pre_check_succeeded = p.returncode == 0
-        if _pre_check_succeeded:
-            logger.info("Pre-check for SRT CLI tool succeeded!")
-        else:
-            logger.error("Pre-check for SRT CLI tool failed", return_code=p.returncode, stderr=p.stderr.decode())
+        if not self.pre_check_succeeded:
+            raise RuntimeError(
+                "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
+            )
 
-    if not _pre_check_succeeded:
-        raise RuntimeError(
-            "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
-        )
+        # create a temp working dir for the code to have write perms in
+        code_path = self.settings.working_directory / uuid.uuid4().hex
+        (code_path / "output").mkdir(parents=True)
 
-    logger.info("Running python code...", code=python_code, settings=settings.model_dump())
+        # write the code to a temp file
+        code_file_path = code_path / "code.py"
+        with code_file_path.open("w") as file:
+            file.write(python_code)
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as file:
-        file.write(python_code)
-        path = Path(file.name)
+        # run the code
+        logger.info("Running python code...", code=python_code, settings=self.settings.model_dump())
+        try:
+            cmd = f""""{self.settings.path_to_python_interpreter}" "{code_file_path}" """
+            p = subprocess.run(  # noqa: S603
+                ("srt", "--settings", self.settings.path_to_srt_settings, cmd),
+                cwd=code_path,
+                capture_output=True,
+                timeout=self.settings.code_timeout_seconds,
+            )
+            logger.info(
+                "Command executed", cmd=cmd, stdout=p.stdout.decode(), stderr=p.stderr.decode(), returncode=p.returncode
+            )
+        finally:
+            responses = [
+                CodeExecutionResult(
+                    status="success" if p.returncode == 0 else "failure",
+                    output=p.stdout.decode().strip(),
+                    error=p.stderr.decode() if p.stderr else None,
+                )
+            ]
 
-    try:
-        cmd = f""""{settings.path_to_python_interpreter}" "{path}" """
-        p = subprocess.run(("srt", cmd), cwd=".", capture_output=True, timeout=settings.code_timeout_seconds)  # noqa: S603
-        logger.info(
-            "Command executed", cmd=cmd, stdout=p.stdout.decode(), stderr=p.stderr.decode(), returncode=p.returncode
-        )
-    finally:
-        # remove file always
-        path.unlink()
+            # return output files
+            for file in (code_path / "output").iterdir():
+                type_guess = guess(file)
 
-    return CodeExecutionResult(
-        status="success" if p.returncode == 0 else "failure",
-        output=p.stdout.decode().strip(),
-        error=p.stderr.decode() if p.stderr else None,
-    )
+                # is image?
+                if type_guess in IMAGE:
+                    responses.append(Image(path=file))
+
+                # is audio?
+                elif type_guess in AUDIO:
+                    responses.append(Audio(path=file))
+
+                # okay no idea what - normal file it its
+                else:
+                    responses.append(File(path=file))
+
+            # remove temp directory & all files
+            shutil.rmtree(code_path)
+
+        return responses

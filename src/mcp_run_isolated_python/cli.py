@@ -131,6 +131,7 @@ def run(
         path_to_srt_settings=path_to_srt_settings,
         log_level=log_level,
         installed_python_dependencies=python_dependencies,
+        working_directory=working_directory,
     )
     run_mcp(settings=settings)
 

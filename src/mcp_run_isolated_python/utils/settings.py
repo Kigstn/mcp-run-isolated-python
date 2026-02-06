@@ -15,6 +15,7 @@ class Settings(BaseModel):
     log_level: int
     path_to_python_interpreter: Path
     path_to_srt_settings: Path
+    working_directory: Path
 
     installed_python_dependencies: list[str] = Field(default_factory=list)
 
@@ -29,6 +30,7 @@ class Settings(BaseModel):
             log_level=logging.INFO,
             code_timeout_seconds=30,
             path_to_python_interpreter=Path.cwd() / ".venv" / "bin" / "python",
+            working_directory=Path.cwd() / ".testing",
             path_to_srt_settings=Path.cwd() / "default_srt_settings.json",
         )
 

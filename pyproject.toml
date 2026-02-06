@@ -81,7 +81,7 @@ preview = true
 [tool.pytest.ini_options]
 # https://docs.pytest.org/en/latest/explanation/goodpractices.html
 addopts = ["--import-mode=importlib"]
-testpaths = "tests"
+testpaths = ["./tests"]
 pythonpath = "."
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"

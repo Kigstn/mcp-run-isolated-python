@@ -3,6 +3,7 @@ import logging
 import fastmcp
 import pydantic
 import structlog
+from structlog.typing import FilteringBoundLogger
 
 from mcp_run_isolated_python.log.otel import add_open_telemetry_spans
 
@@ -32,7 +33,7 @@ def configure_logging(log_level: int = logging.INFO):
 configure_logging()
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str) -> FilteringBoundLogger:
     name = str(name)
 
     if not name.startswith("mcp_run_isolated_python."):

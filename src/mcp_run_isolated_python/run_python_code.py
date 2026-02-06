@@ -11,8 +11,6 @@ from mcp_run_isolated_python.utils.mcp_context import get_settings
 
 logger = get_logger(__name__)
 
-py_executable = "/Users/daniel.jaekel/PycharmProjects/NonVodafone/mcp-run-isolated-python/.venv/bin/python"
-
 _pre_check_succeeded: bool | None = None
 
 
@@ -37,25 +35,25 @@ def run_python_code(
         if _pre_check_succeeded:
             logger.info("Pre-check for SRT CLI tool succeeded!")
         else:
-            logger.error(f"Pre-check for SRT CLI tool failed with return code {p.returncode} and error: {p.stderr}")
+            logger.error("Pre-check for SRT CLI tool failed", return_code=p.returncode, stderr=p.stderr.decode())
 
     if not _pre_check_succeeded:
         raise RuntimeError(
             "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
         )
 
-    logger.info("Running python code...", code=python_code, settings=settings.model_dump())  # ty:ignore[unknown-argument]
+    logger.info("Running python code...", code=python_code, settings=settings.model_dump())
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as file:
         file.write(python_code)
         path = Path(file.name)
 
     try:
-        cmd = f""""{py_executable}" "{path}" """
+        cmd = f""""{settings.path_to_python_interpreter}" "{path}" """
         p = subprocess.run(("srt", cmd), cwd=".", capture_output=True, timeout=settings.code_timeout_seconds)  # noqa: S603
         logger.info(
             "Command executed", cmd=cmd, stdout=p.stdout.decode(), stderr=p.stderr.decode(), returncode=p.returncode
-        )  # ty:ignore[unknown-argument]
+        )
     finally:
         # remove file always
         path.unlink()

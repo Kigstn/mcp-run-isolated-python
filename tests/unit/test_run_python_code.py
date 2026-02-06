@@ -102,6 +102,24 @@ def test_run_python_code_success(code: str, expected_output: str, mocked_context
             """ValueError: An error occurred""",
             id="raises",
         ),
+        pytest.param(
+            """
+            with open("./file.txt", "w") as f:
+                f.write("hi")
+            """,
+            "",
+            """PermissionError: [Errno 1] Operation not permitted""",
+            id="file write",
+        ),
+        pytest.param(
+            """
+            import requests
+            requests.get("https://www.google.com")
+            """,
+            "",
+            """OSError: Tunnel connection failed""",
+            id="network request",
+        ),
     ],
 )
 def test_run_python_code_failure(

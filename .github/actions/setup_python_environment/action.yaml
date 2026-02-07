@@ -27,5 +27,4 @@ runs:
       shell: bash
       run: |
         npm install -g @anthropic-ai/sandbox-runtime
-        sudo apt-get install ripgrep socat
-        npm install bubblewrap
+        sudo apt-get install ripgrep socat bubblewrap

@@ -49,7 +49,7 @@ class CodeExecutor(BaseModel):
 
         if not self._pre_check_succeeded:
             raise RuntimeError(
-                "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
+                "Pre-check for SRT CLI tool failed. Please install it: `npm install @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
             )
 
         # create a temp working dir for the code to have write perms in

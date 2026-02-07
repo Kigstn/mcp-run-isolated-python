@@ -26,5 +26,5 @@ runs:
     - name: Install srt & deps
       shell: bash
       run: |
-        npm install -g @anthropic-ai/sandbox-runtime
+        npm install @anthropic-ai/sandbox-runtime
         sudo apt-get install ripgrep socat bubblewrap

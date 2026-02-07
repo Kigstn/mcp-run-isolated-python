@@ -47,11 +47,11 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
         ),
         pytest.param(
             """
-            with open("/file.txt", "w") as f:
+            with open("../file.txt", "w") as f:
                 f.write("hi")
             """,
             "",
-            """PermissionError: [Errno 1] Operation not permitted""",
+            "PermissionError: [Errno 1] Operation not permitted",
             id="file write",
         ),
         pytest.param(

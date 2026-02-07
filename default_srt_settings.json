@@ -10,5 +10,5 @@
         "allowWrite": ["."],
         "denyWrite": []
     },
-    "enableWeakerNestedSandbox": true
+    "enableWeakerNestedSandbox": false
 }

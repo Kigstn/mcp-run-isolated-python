@@ -12,7 +12,9 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    # running on ubuntu 22 due to this bug:
+    # https://github.com/anthropic-experimental/sandbox-runtime/issues/74
+    runs-on: ubuntu-22.04
 
     strategy:
       matrix:

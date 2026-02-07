@@ -1,6 +1,6 @@
 import pytest
 
-from mcp_run_isolated_python.run_python_code import CodeExecutor
+from mcp_run_isolated_python.code_executor import CodeExecutor
 from mcp_run_isolated_python.utils.settings import Settings
 
 

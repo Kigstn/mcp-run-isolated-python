@@ -7,8 +7,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from mcp_run_isolated_python.log.logger import configure_logging, get_logger
 from mcp_run_isolated_python.mcp_server import run_mcp
+from mcp_run_isolated_python.utils.logger import configure_logging, get_logger
 from mcp_run_isolated_python.utils.settings import Settings
 
 # todo tests

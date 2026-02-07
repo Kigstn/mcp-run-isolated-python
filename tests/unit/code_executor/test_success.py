@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastmcp.utilities.types import Audio, File, Image
 
-from mcp_run_isolated_python.run_python_code import CodeExecutionResult, CodeExecutor
+from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecutor
 
 
 @pytest.mark.parametrize(
@@ -138,7 +138,7 @@ from mcp_run_isolated_python.run_python_code import CodeExecutionResult, CodeExe
         ),
     ],
 )
-def test_run_python_code_success(
+def test_success(
     code: str, expected_output: str, expected_file_data: list[dict[str, Any]], code_executor: CodeExecutor
 ) -> None:
     context_mock = MagicMock()
@@ -158,81 +158,3 @@ def test_run_python_code_success(
     for file_response, expected_data in zip(responses, expected_file_data, strict=False):
         assert isinstance(file_response, expected_data["type"])
         assert file_response._mime_type == expected_data["mime"]
-
-
-@pytest.mark.parametrize(
-    "code,expected_output,expected_partial_error",
-    [
-        pytest.param(
-            """
-            unknown_func()
-            """,
-            "",
-            """NameError: name 'unknown_func' is not defined""",
-            id="unknown functions",
-        ),
-        pytest.param(
-            """
-            1+1
-               print(1)
-            """,
-            "",
-            "IndentationError: unexpected indent",
-            id="indentation errors",
-        ),
-        pytest.param(
-            """
-            print(1)
-            unknown_func()
-            """,
-            "1",
-            """NameError: name 'unknown_func' is not defined""",
-            id="in-progress failures with partial output",
-        ),
-        pytest.param(
-            """
-            raise ValueError("An error occurred")
-            """,
-            "",
-            """ValueError: An error occurred""",
-            id="raises",
-        ),
-        pytest.param(
-            """
-            with open("/file.txt", "w") as f:
-                f.write("hi")
-            """,
-            "",
-            """PermissionError: [Errno 1] Operation not permitted""",
-            id="file write",
-        ),
-        pytest.param(
-            """
-            import requests
-            requests.get("https://www.google.com")
-            """,
-            "",
-            """OSError: Tunnel connection failed""",
-            id="network request",
-        ),
-    ],
-)
-def test_run_python_code_failure(
-    code: str, expected_output: str, expected_partial_error: str, code_executor: CodeExecutor
-) -> None:
-    context_mock = MagicMock()
-
-    code = textwrap.dedent(code).strip()
-    responses = code_executor.run_python_code(python_code=code, ctx=context_mock)
-
-    # first item is the code execution result, the rest are files
-    response = responses.pop(0)
-    assert isinstance(response, CodeExecutionResult)
-    assert response.status == "failure"
-    assert response.output == expected_output
-    assert isinstance(response.error, str)
-    assert expected_partial_error in response.error
-
-    # check the file
-    for _file_response in responses:
-        pass

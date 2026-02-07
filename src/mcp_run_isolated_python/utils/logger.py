@@ -5,7 +5,7 @@ import pydantic
 import structlog
 from structlog.typing import FilteringBoundLogger
 
-from mcp_run_isolated_python.log.otel import add_open_telemetry_spans
+from mcp_run_isolated_python.utils.otel import add_open_telemetry_spans
 
 
 def configure_logging(log_level: int = logging.INFO):

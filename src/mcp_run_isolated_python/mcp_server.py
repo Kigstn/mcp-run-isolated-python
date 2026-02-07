@@ -3,8 +3,8 @@ import textwrap
 from fastmcp import FastMCP
 from fastmcp.tools import Tool
 
-from mcp_run_isolated_python.log.logger import get_logger
-from mcp_run_isolated_python.run_python_code import CodeExecutor
+from mcp_run_isolated_python.code_executor import CodeExecutor
+from mcp_run_isolated_python.utils.logger import get_logger
 from mcp_run_isolated_python.utils.settings import Settings
 
 logger = get_logger(__name__)

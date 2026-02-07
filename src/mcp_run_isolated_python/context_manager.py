@@ -5,7 +5,7 @@ from typing import AsyncIterator
 from fastmcp import Client
 from pydantic import BaseModel
 
-from mcp_run_isolated_python.run_python_code import CodeExecutionResult
+from mcp_run_isolated_python.code_executor import CodeExecutionResult
 
 
 class CodeSandbox(BaseModel):

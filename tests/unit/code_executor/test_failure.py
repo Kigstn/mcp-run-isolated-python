@@ -47,7 +47,9 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
         ),
         pytest.param(
             """
-            with open("../file.txt", "w") as f:
+            import os
+            temp_folder = os.environ.get("RUNNER_TEMP", "/tmp")
+            with open(f"{temp_folder}/file.txt", "w") as f:
                 f.write("hi")
             """,
             "",

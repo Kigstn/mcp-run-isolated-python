@@ -3,6 +3,7 @@
 
 # Args to make versions configurable easily
 ARG PYTHON_VERSION=3.13
+ARG PYTHON_DEPENDENCIES=""
 
 # ----------------------------
 # Builder stage
@@ -34,6 +35,10 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable --no-dev
 
+# now install the uv env that will be used by the code executor
+WORKDIR /sandbox
+RUN uv pip install ${PYTHON_DEPENDENCIES}
+
 
 # ----------------------------
 # Final stage
@@ -49,7 +54,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # install the srt sandbox
-RUN npm install @anthropic-ai/sandbox-runtime
+RUN npm install -g @anthropic-ai/sandbox-runtime
 
 WORKDIR /code
 
@@ -67,6 +72,10 @@ COPY --from=builder --chown=nonroot:nonroot /code /code
 ENV PATH="/code/.venv/bin:$PATH"
 
 USER nonroot
+
+# ----------------------------
+# Setup the sandbox on the final image
+COPY --from=builder --chown=nonroot:nonroot /sandbox /sandbox
 
 # todo install python deps & uv env
 # todo entrypoint

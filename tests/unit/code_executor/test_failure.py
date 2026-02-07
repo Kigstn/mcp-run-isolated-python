@@ -49,7 +49,7 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
             """
             import os
             temp_folder = os.environ.get("RUNNER_TEMP", "/tmp")
-            with open(f"{temp_folder}/file.txt", "w") as f:
+            with open(os.path.join(temp_folder, "file.txt"), "w") as f:
                 f.write("hi")
             """,
             "",

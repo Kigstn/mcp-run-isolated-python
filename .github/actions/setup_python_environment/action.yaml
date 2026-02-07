@@ -23,8 +23,9 @@ runs:
     - name: Install node
       uses: actions/setup-node@v6
 
-    - name: Install srt & ripgrep
+    - name: Install srt & deps
       shell: bash
       run: |
         npm install -g @anthropic-ai/sandbox-runtime
-        sudo apt install ripgrep
+        sudo apt-get install ripgrep socat
+        npm install bubblewrap

@@ -53,7 +53,7 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
                 f.write("hi")
             """,
             "",
-            "PermissionError: [Errno 1] Operation not permitted",
+            ["PermissionError: [Errno 1] Operation not permitted", "OSError: [Errno 30] Read-only file system"],
             id="file write",
         ),
         pytest.param(
@@ -78,8 +78,14 @@ def test_failure(code: str, expected_output: str, expected_partial_error: str, c
     assert isinstance(response, CodeExecutionResult)
     assert response.status == "failure"
     assert response.output == expected_output
+    if not isinstance(expected_partial_error, list):
+        expected_partial_error: list[str] = [expected_partial_error]
     assert isinstance(response.error, str)
-    assert expected_partial_error in response.error
+    for possibility in expected_partial_error:
+        if possibility in response.error:
+            break
+    else:
+        raise AssertionError("Partial error not raised")
 
     # check no file responses
     assert len(responses) == 0

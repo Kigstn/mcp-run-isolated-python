@@ -1,3 +1,4 @@
+import subprocess  # noqa: S404
 import textwrap
 
 from fastmcp import FastMCP
@@ -18,6 +19,9 @@ def run_mcp(settings: Settings):
     mcp = FastMCP(name=name)
     code_executor = CodeExecutor(settings=settings)
 
+    # what python version are we running
+    python_version = subprocess.run((settings.path_to_python_interpreter, "--version"), capture_output=True)  # noqa: S603
+
     mcp.add_tool(
         Tool.from_function(
             code_executor.run_python_code,
@@ -26,12 +30,12 @@ def run_mcp(settings: Settings):
     
             ### Guidelines
             - The code may be async
-            - To output values, you have to use the print statement.
+            - To output & view values, you have to print them to the console.
             - You do **not** have any access to the internet
-            - The code will be executed with Python 3.13
+            - The code will be executed with {python_version.stdout}
             - You code must be executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
-            - You have these additional python packages installed: `${settings.installed_python_dependencies}\
-            - To output files or images, save them in the "./output" folder
+            - You have these additional python packages installed - you cannot install more: `{settings.installed_python_dependencies}`
+            - To output files or images, save them in the `./output` folder
             """),
         )
     )

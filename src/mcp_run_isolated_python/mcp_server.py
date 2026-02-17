@@ -1,4 +1,4 @@
-import subprocess  # noqa: S404
+import asyncio
 import textwrap
 
 from fastmcp import FastMCP
@@ -12,15 +12,13 @@ logger = get_logger(__name__)
 
 name = "mcp_run_isolated_python"
 
-# todo tests
 
-
-def run_mcp(settings: Settings):
+async def run_mcp(settings: Settings):
     mcp = FastMCP(name=name)
     code_executor = CodeExecutor(settings=settings)
 
     # what python version are we running
-    python_version = subprocess.run((settings.path_to_python_interpreter, "--version"), capture_output=True)  # noqa: S603
+    python_version = await asyncio.create_subprocess_shell(f"'{settings.path_to_python_interpreter}' --version")
 
     mcp.add_tool(
         Tool.from_function(
@@ -45,7 +43,7 @@ def run_mcp(settings: Settings):
     )
     logger.info("Streaming logs from the MCP server:")
 
-    mcp.run(
+    await mcp.run_async(
         transport=settings.transport,  # ty:ignore[invalid-argument-type]
         stateless=settings.stateless,
         host=settings.host,
@@ -57,4 +55,4 @@ def run_mcp(settings: Settings):
 
 if __name__ == "__main__":
     settings = Settings.using_defaults()
-    run_mcp(settings=settings)
+    asyncio.run(run_mcp(settings=settings))

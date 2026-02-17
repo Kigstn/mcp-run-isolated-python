@@ -9,6 +9,7 @@ from fastmcp import Context
 from fastmcp.utilities.types import Audio, File, Image
 from filetype import guess
 from filetype.types import AUDIO, IMAGE
+from mcp.types import AudioContent, EmbeddedResource, ImageContent
 from pydantic import BaseModel
 
 from mcp_run_isolated_python.utils.logger import get_logger
@@ -43,7 +44,7 @@ class CodeExecutor(BaseModel):
         self,
         python_code: Annotated[str, "The python code to execute"],
         ctx: Context,
-    ) -> list[CodeExecutionResult | File | Image | Audio]:
+    ) -> list[CodeExecutionResult | EmbeddedResource | ImageContent | AudioContent]:
         try:
             # create a temp working dir for the code to have write perms in
             code_path = self.settings.working_directory / uuid.uuid4().hex
@@ -88,15 +89,15 @@ class CodeExecutor(BaseModel):
 
                     # is image?
                     if type_guess in IMAGE:
-                        responses.append(Image(path=file))
+                        responses.append(Image(path=file).to_image_content())
 
                     # is audio?
                     elif type_guess in AUDIO:
-                        responses.append(Audio(path=file))
+                        responses.append(Audio(path=file).to_audio_content())
 
                     # okay no idea what - normal file it its
                     else:
-                        responses.append(File(path=file))
+                        responses.append(File(path=file).to_resource_content())
 
                 # remove temp directory & all files
                 shutil.rmtree(code_path)

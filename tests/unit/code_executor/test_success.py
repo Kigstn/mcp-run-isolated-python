@@ -3,7 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from fastmcp.utilities.types import Audio, File, Image
+from mcp.types import AudioContent, EmbeddedResource, ImageContent, TextResourceContents
 
 from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecutor
 
@@ -79,8 +79,8 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
             "",
             [
                 {
-                    "type": File,
-                    "mime": "text/plain",
+                    "type": EmbeddedResource,
+                    "content": "hi",
                 }
             ],
             id="file write - file",
@@ -95,12 +95,12 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
             "",
             [
                 {
-                    "type": File,
-                    "mime": "text/plain",
+                    "type": EmbeddedResource,
+                    "content": "bye",
                 },
                 {
-                    "type": File,
-                    "mime": "text/plain",
+                    "type": EmbeddedResource,
+                    "content": "hi",
                 },
             ],
             id="file write - two files",
@@ -114,7 +114,7 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
             "",
             [
                 {
-                    "type": Audio,
+                    "type": AudioContent,
                     "mime": "audio/mpeg",
                 }
             ],
@@ -130,7 +130,7 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
             "",
             [
                 {
-                    "type": Image,
+                    "type": ImageContent,
                     "mime": "image/png",
                 }
             ],
@@ -157,4 +157,16 @@ def test_success(
     assert len(responses) == len(expected_file_data)
     for file_response, expected_data in zip(responses, expected_file_data, strict=False):
         assert isinstance(file_response, expected_data["type"])
-        assert file_response._mime_type == expected_data["mime"]
+
+        match file_response:
+            case EmbeddedResource():
+                assert isinstance(file_response.resource, TextResourceContents)
+                assert file_response.resource.text == expected_data["content"]
+            case ImageContent():
+                assert file_response.mimeType == expected_data["mime"]
+                assert file_response.data
+            case AudioContent():
+                assert file_response.mimeType == expected_data["mime"]
+                assert file_response.data
+            case _:
+                raise AssertionError(f"Unexpected content type: {type(file_response)}")

@@ -1,14 +1,15 @@
 # Adapted from:
 # - https://github.com/astral-sh/uv-docker-example/blob/main/standalone.Dockerfile
 
-# Args to make versions configurable easily
+# Args to make configurable easily
 ARG PYTHON_VERSION=3.13
 ARG PYTHON_DEPENDENCIES=""
+ARG ENVIROMENT="trixie-slim"
 
 # ----------------------------
 # Builder stage
 # ----------------------------
-FROM ghcr.io/astral-sh/uv:trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:${ENVIROMENT} AS builder
 
 # Setup uv environment variables
 # Configure the Python directory so it is consistent
@@ -20,9 +21,13 @@ ENV UV_PYTHON_PREFERENCE=only-managed
 # Install Python before the project for caching
 RUN uv python install ${PYTHON_VERSION}
 
-WORKDIR /code
+# Install the custom uv environment that will be used by the code executor
+WORKDIR /sandbox
+RUN uv venv --python "${PYTHON_VERSION}"
+RUN uv pip install "${PYTHON_DEPENDENCIES}"
 
 # Install dependencies (without workspace code, for caching)
+WORKDIR /code
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -35,16 +40,11 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable --no-dev
 
-# now install the uv env that will be used by the code executor
-WORKDIR /sandbox
-RUN uv pip install ${PYTHON_DEPENDENCIES}
-
-
 # ----------------------------
 # Final stage
 # ----------------------------
 # Then, use a final image without uv, but with node
-FROM node:trixie-slim
+FROM node:${ENVIROMENT}
 LABEL authors="daniel.j"
 
 # install certs & required deps
@@ -68,15 +68,13 @@ COPY --from=builder --chown=python:python /python /python
 # Copy project (with venv)
 COPY --from=builder --chown=nonroot:nonroot /code /code
 
+# Copy Sandbox
+COPY --from=builder --chown=nonroot:nonroot /sandbox /sandbox
+
 # Place executables in the environment at the front of the path
 ENV PATH="/code/.venv/bin:$PATH"
 
 USER nonroot
 
-# ----------------------------
-# Setup the sandbox on the final image
-COPY --from=builder --chown=nonroot:nonroot /sandbox /sandbox
-
-# todo install python deps & uv env
 # todo entrypoint
 # todo create custom settings maybe?

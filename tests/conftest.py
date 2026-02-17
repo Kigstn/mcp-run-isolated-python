@@ -6,7 +6,12 @@ from mcp_run_isolated_python.utils.settings import Settings
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings.using_defaults()
+    settings = Settings.using_defaults()
+
+    # use a different port for tests to avoid conflicts with a running server
+    settings.port += 1
+
+    return settings
 
 
 @pytest.fixture

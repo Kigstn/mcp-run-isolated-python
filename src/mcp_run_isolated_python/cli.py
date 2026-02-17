@@ -1,9 +1,9 @@
+import asyncio
 import logging
-import subprocess  # noqa: S404
 from pathlib import Path
 from typing import Annotated
 
-import typer
+import cyclopts
 from rich.console import Console
 from rich.table import Table
 
@@ -11,10 +11,8 @@ from mcp_run_isolated_python.mcp_server import run_mcp
 from mcp_run_isolated_python.utils.logger import configure_logging, get_logger
 from mcp_run_isolated_python.utils.settings import Settings
 
-# todo tests
 
-
-def run(
+async def run(
     path_to_srt_settings: Annotated[
         Path | None,
         "Path to a settings file containing settings for the sandbox environment. View: `https://github.com/anthropic-experimental/sandbox-runtime?tab=readme-ov-file#configuration` for more information. There is a default settings file which will be used otherwise.",
@@ -94,16 +92,18 @@ def run(
 
     # create a virtual environment and install dependencies
     if path_to_python is None:
-        subprocess.run(["uv", "venv", "--python", python_version], cwd=working_directory, capture_output=True)  # noqa: S603, S607
+        await asyncio.create_subprocess_shell(f"uv venv --python '{python_version}'", cwd=working_directory)
         if python_dependencies:
-            subprocess.run(["uv", "pip", "install", " ".join(python_dependencies)], cwd=working_directory)  # noqa: S603, S607
+            await asyncio.create_subprocess_shell(
+                f"uv pip install '{' '.join(python_dependencies)}'", cwd=working_directory
+            )
 
         path_to_python = working_directory / ".venv" / "bin" / "python"
 
     # verify that the provided python interpreter works
     else:
-        p = subprocess.run([path_to_python, "--version"], cwd=working_directory, capture_output=True)  # noqa: S603
-        if p != 0:
+        p = await asyncio.create_subprocess_shell(f"'{path_to_python}' --version", cwd=working_directory)
+        if p.returncode != 0:
             logger.error(f"The provided python interpreter is not working. Please check the path and try again: {p}")
             return
 
@@ -133,8 +133,8 @@ def run(
         installed_python_dependencies=python_dependencies,
         working_directory=working_directory,
     )
-    run_mcp(settings=settings)
+    await run_mcp(settings=settings)
 
 
 if __name__ == "__main__":
-    typer.run(run)
+    cyclopts.run(run)

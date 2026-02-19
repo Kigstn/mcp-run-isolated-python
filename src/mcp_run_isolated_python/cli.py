@@ -33,6 +33,10 @@ async def run(
         Path | None,
         "The working directory to run the application in. If not provided, the current working directory will be used.",
     ] = None,
+    user: Annotated[
+        str | None,
+        "The user to execute the command with. Useful if you have a non-root user. If not provided, the current user is used.",
+    ] = None,
     log_level: Annotated[
         int,
         "The log level to use for the application. Example: `logging.INFO -> 20`",
@@ -92,17 +96,22 @@ async def run(
 
     # create a virtual environment and install dependencies
     if path_to_python is None:
-        await asyncio.create_subprocess_shell(f"uv venv --python '{python_version}'", cwd=working_directory)
+        p = await asyncio.create_subprocess_shell(
+            f"uv venv --python '{python_version}' --allow-existing", cwd=working_directory
+        )
+        await p.wait()
         if python_dependencies:
-            await asyncio.create_subprocess_shell(
+            p = await asyncio.create_subprocess_shell(
                 f"uv pip install '{' '.join(python_dependencies)}'", cwd=working_directory
             )
+            await p.wait()
 
         path_to_python = working_directory / ".venv" / "bin" / "python"
 
     # verify that the provided python interpreter works
     else:
         p = await asyncio.create_subprocess_shell(f"'{path_to_python}' --version", cwd=working_directory)
+        await p.wait()
         if p.returncode != 0:
             logger.error(f"The provided python interpreter is not working. Please check the path and try again: {p}")
             return
@@ -132,9 +141,14 @@ async def run(
         log_level=log_level,
         installed_python_dependencies=python_dependencies,
         working_directory=working_directory,
+        user=user,
     )
     await run_mcp(settings=settings)
 
 
-if __name__ == "__main__":
+def main():
     cyclopts.run(run)
+
+
+if __name__ == "__main__":
+    main()

@@ -16,6 +16,7 @@ class Settings(BaseModel):
     path_to_python_interpreter: Path
     path_to_srt_settings: Path
     working_directory: Path
+    user: str | None
 
     installed_python_dependencies: list[str] = Field(default_factory=list)
 
@@ -32,6 +33,7 @@ class Settings(BaseModel):
             path_to_python_interpreter=Path.cwd() / ".venv" / "bin" / "python",
             working_directory=Path.cwd() / ".testing",
             path_to_srt_settings=Path.cwd() / "default_srt_settings.json",
+            user=None,
         )
 
     @field_validator("path_to_srt_settings", mode="after")

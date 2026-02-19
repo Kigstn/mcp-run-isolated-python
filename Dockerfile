@@ -2,14 +2,16 @@
 # - https://github.com/astral-sh/uv-docker-example/blob/main/standalone.Dockerfile
 
 # Args to make configurable easily
-ARG PYTHON_VERSION=3.13
-ARG PYTHON_DEPENDENCIES=""
 ARG ENVIROMENT="trixie-slim"
 
 # ----------------------------
 # Builder stage
 # ----------------------------
 FROM ghcr.io/astral-sh/uv:${ENVIROMENT} AS builder
+
+# Args to make configurable easily
+ARG PYTHON_VERSION="3.13"
+ARG PYTHON_DEPENDENCIES="pydantic"
 
 # Setup uv environment variables
 # Configure the Python directory so it is consistent
@@ -23,22 +25,18 @@ RUN uv python install ${PYTHON_VERSION}
 
 # Install the custom uv environment that will be used by the code executor
 WORKDIR /sandbox
-RUN uv venv --python "${PYTHON_VERSION}"
-RUN uv pip install "${PYTHON_DEPENDENCIES}"
-
-# Install dependencies (without workspace code, for caching)
-WORKDIR /code
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable --no-dev
+RUN uv venv --python ${PYTHON_VERSION}
+RUN uv pip install ${PYTHON_DEPENDENCIES}
 
 # Copy project source
+WORKDIR /code
 COPY . .
 
+# make sure the srt default config has the `enableWeakerNestedSandbox` set to true (needed for docker)
+RUN sed -i 's/"enableWeakerNestedSandbox": *false/"enableWeakerNestedSandbox": true/' ./default_srt_settings.json
+
 # Install project + deps into venv
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --no-dev
+RUN uv sync --frozen --no-editable --no-dev
 
 # ----------------------------
 # Final stage
@@ -55,6 +53,7 @@ RUN apt-get update \
 
 # install the srt sandbox
 RUN npm install -g @anthropic-ai/sandbox-runtime
+RUN chmod u+s /usr/bin/bwrap
 
 WORKDIR /code
 
@@ -74,7 +73,8 @@ COPY --from=builder --chown=nonroot:nonroot /sandbox /sandbox
 # Place executables in the environment at the front of the path
 ENV PATH="/code/.venv/bin:$PATH"
 
-USER nonroot
+EXPOSE 6400
 
-# todo entrypoint
+ENTRYPOINT ["mcp-run-isolated-python", "--path_to_python='/sandbox/.venv/bin/python'", "--user=nonroot"]
+
 # todo create custom settings maybe?

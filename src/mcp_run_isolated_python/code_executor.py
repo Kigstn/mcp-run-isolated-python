@@ -40,6 +40,7 @@ class CodeExecutor(BaseModel):
                 "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
             )
 
+    # Note: This is a sync function on purpose, to avoid the complexity of async subprocess. Uvicorn will spawn this in a thread
     def run_python_code(
         self,
         python_code: Annotated[str, "The python code to execute"],
@@ -64,6 +65,7 @@ class CodeExecutor(BaseModel):
                     cwd=code_path,
                     capture_output=True,
                     timeout=self.settings.code_timeout_seconds,
+                    user=self.settings.user,
                     # limit the env vars, just need path
                     env={"PATH": os.environ.get("PATH", "")},
                 )

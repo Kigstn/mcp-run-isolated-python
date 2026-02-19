@@ -32,9 +32,12 @@ dev = [
 [project.urls]
 Repository = "https://github.com/Kigstn/mcp-run-isolated-python"
 
+[project.scripts]
+mcp-run-isolated-python = "mcp_run_isolated_python.cli:main"
+
 [build-system]
-requires = ["uv_build>=0.9.30,<0.10.0"]
-build-backend = "uv_build"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 120

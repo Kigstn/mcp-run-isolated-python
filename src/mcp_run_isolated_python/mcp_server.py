@@ -18,7 +18,10 @@ async def run_mcp(settings: Settings):
     code_executor = CodeExecutor(settings=settings)
 
     # what python version are we running
-    python_version = await asyncio.create_subprocess_shell(f"'{settings.path_to_python_interpreter}' --version")
+    python_version = await asyncio.create_subprocess_shell(
+        f"'{settings.path_to_python_interpreter}' --version", stdout=asyncio.subprocess.PIPE
+    )
+    await python_version.wait()
 
     mcp.add_tool(
         Tool.from_function(
@@ -30,7 +33,7 @@ async def run_mcp(settings: Settings):
             - The code may be async
             - To output & view values, you have to print them to the console.
             - You do **not** have any access to the internet
-            - The code will be executed with {python_version.stdout}
+            - The code will be executed with {await python_version.stdout.read()}
             - You code must be executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
             - You have these additional python packages installed - you cannot install more: `{settings.installed_python_dependencies}`
             - To output files or images, save them in the `./output` folder

@@ -5,7 +5,6 @@ import traceback
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastmcp import Context
 from fastmcp.utilities.types import Audio, File, Image
 from filetype import guess
 from filetype.types import AUDIO, IMAGE
@@ -13,7 +12,7 @@ from mcp.types import AudioContent, EmbeddedResource, ImageContent
 from pydantic import BaseModel
 
 from mcp_run_isolated_python.utils.logger import get_logger
-from mcp_run_isolated_python.utils.settings import Settings
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
 
 logger = get_logger(__name__)
 
@@ -24,8 +23,11 @@ class CodeExecutionResult(BaseModel):
     error: str | None = None
 
 
+TypeReturnValue = list[CodeExecutionResult | EmbeddedResource | ImageContent | AudioContent]
+
+
 class CodeExecutor(BaseModel):
-    settings: Settings
+    settings: CodeSandboxSettings
 
     def model_post_init(self, context: Any, /) -> None:
         logger.info("Pre first run: Running pre-check to verify SRT CLI tool is available and working...")
@@ -44,8 +46,7 @@ class CodeExecutor(BaseModel):
     def run_python_code(
         self,
         python_code: Annotated[str, "The python code to execute"],
-        ctx: Context,
-    ) -> list[CodeExecutionResult | EmbeddedResource | ImageContent | AudioContent]:
+    ) -> TypeReturnValue:
         try:
             # create a temp working dir for the code to have write perms in
             code_path = self.settings.working_directory / uuid.uuid4().hex

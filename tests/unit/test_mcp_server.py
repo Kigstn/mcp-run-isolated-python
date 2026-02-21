@@ -7,10 +7,10 @@ from mcp.types import EmbeddedResource, TextContent
 
 from mcp_run_isolated_python.code_executor import CodeExecutionResult
 from mcp_run_isolated_python.mcp_server import run_mcp
-from mcp_run_isolated_python.utils.settings import Settings
+from mcp_run_isolated_python.utils.settings import FullSettings
 
 
-async def test_start_mcp_server(settings: Settings):
+async def test_start_mcp_server(settings: FullSettings):
     # start server and wait 5s to be up
     process = asyncio.create_task(run_mcp(settings=settings))
     await asyncio.sleep(5)

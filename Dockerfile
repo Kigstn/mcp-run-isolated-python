@@ -33,7 +33,7 @@ WORKDIR /code
 COPY . .
 
 # make sure the srt default config has the `enableWeakerNestedSandbox` set to true (needed for docker)
-RUN sed -i 's/"enableWeakerNestedSandbox": *false/"enableWeakerNestedSandbox": true/' ./default_srt_settings.json
+# RUN sed -i 's/"enableWeakerNestedSandbox": *false/"enableWeakerNestedSandbox": true/' ./default_srt_settings.json
 
 # Install project + deps into venv
 RUN uv sync --frozen --no-editable --no-dev
@@ -53,7 +53,6 @@ RUN apt-get update \
 
 # install the srt sandbox
 RUN npm install -g @anthropic-ai/sandbox-runtime
-RUN chmod u+s /usr/bin/bwrap
 
 WORKDIR /code
 

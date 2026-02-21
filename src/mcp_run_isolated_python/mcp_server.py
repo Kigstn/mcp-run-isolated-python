@@ -6,14 +6,14 @@ from fastmcp.tools import Tool
 
 from mcp_run_isolated_python.code_executor import CodeExecutor
 from mcp_run_isolated_python.utils.logger import get_logger
-from mcp_run_isolated_python.utils.settings import Settings
+from mcp_run_isolated_python.utils.settings import FullSettings
 
 logger = get_logger(__name__)
 
 name = "mcp_run_isolated_python"
 
 
-async def run_mcp(settings: Settings):
+async def run_mcp(settings: FullSettings):
     mcp = FastMCP(name=name)
     code_executor = CodeExecutor(settings=settings)
 
@@ -57,5 +57,5 @@ async def run_mcp(settings: Settings):
 
 
 if __name__ == "__main__":
-    settings = Settings.using_defaults()
+    settings = FullSettings.using_defaults()
     asyncio.run(run_mcp(settings=settings))

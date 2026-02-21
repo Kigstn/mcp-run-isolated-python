@@ -1,6 +1,5 @@
 import textwrap
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 from mcp.types import AudioContent, EmbeddedResource, ImageContent, TextResourceContents
@@ -141,10 +140,8 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
 def test_success(
     code: str, expected_output: str, expected_file_data: list[dict[str, Any]], code_executor: CodeExecutor
 ) -> None:
-    context_mock = MagicMock()
-
     code = textwrap.dedent(code).strip()
-    responses = code_executor.run_python_code(python_code=code, ctx=context_mock)
+    responses = code_executor.run_python_code(python_code=code)
 
     # first item is the code execution result, the rest are files
     response = responses.pop(0)

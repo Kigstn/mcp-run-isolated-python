@@ -9,7 +9,7 @@ from rich.table import Table
 
 from mcp_run_isolated_python.mcp_server import run_mcp
 from mcp_run_isolated_python.utils.logger import configure_logging, get_logger
-from mcp_run_isolated_python.utils.settings import Settings
+from mcp_run_isolated_python.utils.settings import FullSettings
 
 
 async def run(
@@ -129,7 +129,7 @@ async def run(
         return
 
     # start the application
-    settings = Settings(
+    settings = FullSettings(
         transport=mcp_transport,
         stateless=mcp_stateless,
         port=mcp_port,

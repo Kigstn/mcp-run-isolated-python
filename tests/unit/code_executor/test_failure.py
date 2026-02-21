@@ -1,7 +1,6 @@
 import os
 import textwrap
 from unittest import mock
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -68,10 +67,8 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
     ],
 )
 def test_failure(code: str, expected_output: str, expected_partial_error: str, code_executor: CodeExecutor) -> None:
-    context_mock = MagicMock()
-
     code = textwrap.dedent(code).strip()
-    responses = code_executor.run_python_code(python_code=code, ctx=context_mock)
+    responses = code_executor.run_python_code(python_code=code)
 
     # first item is the code execution result, the rest are files
     response = responses.pop(0)
@@ -92,8 +89,6 @@ def test_failure(code: str, expected_output: str, expected_partial_error: str, c
 
 
 def test_env_vars_failure(code_executor: CodeExecutor, monkeypatch: pytest.MonkeyPatch) -> None:
-    context_mock = MagicMock()
-
     with mock.patch.dict(os.environ):
         monkeypatch.setenv("TEST_ENV", "hi")
 
@@ -101,7 +96,7 @@ def test_env_vars_failure(code_executor: CodeExecutor, monkeypatch: pytest.Monke
         import os
         print(os.environ["TEST_ENV"])
         """).strip()
-        responses = code_executor.run_python_code(python_code=code, ctx=context_mock)
+        responses = code_executor.run_python_code(python_code=code)
 
         assert len(responses) == 1
         assert isinstance(responses[0], CodeExecutionResult)

@@ -33,13 +33,13 @@ class CodeExecutor(BaseModel):
         logger.info("Pre first run: Running pre-check to verify SRT CLI tool is available and working...")
 
         # check that it actually works (all deps installed)
-        p = subprocess.run(("srt", "python -c '1+1'"), capture_output=True)
+        p = subprocess.run(("srt", "-c", "python -c '1+1'"), capture_output=True)
         if p.returncode == 0:
             logger.info("Pre-check for SRT CLI tool succeeded!")
         else:
             logger.error("Pre-check for SRT CLI tool failed", return_code=p.returncode, stderr=p.stderr.decode())
             raise RuntimeError(
-                "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime` & ensure it is working correctly"
+                "Pre-check for SRT CLI tool failed. Please install it: `npm install -g @anthropic-ai/sandbox-runtime@'<=0.0.64'` & ensure it is working correctly"
             )
 
     # Note: This is a sync function on purpose, to avoid the complexity of async subprocess. Uvicorn will spawn this in a thread
@@ -62,7 +62,7 @@ class CodeExecutor(BaseModel):
             try:
                 cmd = f""""{self.settings.path_to_python_interpreter}" "{code_file_path}" """
                 p = subprocess.run(  # noqa: S603
-                    ("srt", "--settings", self.settings.path_to_srt_settings, cmd),
+                    ("srt", "--settings", self.settings.path_to_srt_settings, "-c", cmd),
                     cwd=code_path,
                     capture_output=True,
                     timeout=self.settings.code_timeout_seconds,

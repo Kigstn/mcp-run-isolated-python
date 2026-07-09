@@ -1,6 +1,6 @@
 [project]
 name = "mcp_run_isolated_python"
-version = "0.1.0"
+version = "0.2.0"
 description = "A secure and sandboxed python code interpreter for LLMs. Accessable via MCP, or directly in code"
 authors = [{ name = "Daniel J" }]
 license = { file = "LICENCE" }

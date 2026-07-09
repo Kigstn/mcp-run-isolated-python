@@ -52,7 +52,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # install the srt sandbox
-RUN npm install -g @anthropic-ai/sandbox-runtime
+RUN npm install -g @anthropic-ai/sandbox-runtime@'<=0.0.64'
 
 WORKDIR /code
 

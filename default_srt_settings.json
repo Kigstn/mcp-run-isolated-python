@@ -6,9 +6,9 @@
         "allowLocalBinding": false
     },
     "filesystem": {
-        "denyRead": ["~/.ssh"],
+        "denyRead": [],
         "allowWrite": ["."],
         "denyWrite": []
     },
-    "enableWeakerNestedSandbox": false
+    "enableWeakerNestedSandbox": true
 }

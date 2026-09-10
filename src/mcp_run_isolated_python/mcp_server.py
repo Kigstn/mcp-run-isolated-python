@@ -33,8 +33,8 @@ async def run_mcp(settings: FullSettings):
             - The code may be async
             - To output & view values, you have to print them to the console.
             - You do **not** have any access to the internet
-            - The code will be executed with {await python_version.stdout.read()}
-            - You code must be executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
+            - The code will be executed with {(await python_version.stdout.read()).decode().strip()}
+            - Your code is executed within a timeout. You have {settings.code_timeout_seconds} seconds before the run is canceled.
             - You have these additional python packages installed - you cannot install more: `{settings.installed_python_dependencies}`
             - To output files or images, save them in the `./output` folder
             """),  # ty:ignore[unresolved-attribute]

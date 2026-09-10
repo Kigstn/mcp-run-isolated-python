@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -108,13 +109,11 @@ async def run(
 
         path_to_python = working_directory / ".venv" / "bin" / "python"
 
-    # verify that the provided python interpreter works
-    else:
-        p = await asyncio.create_subprocess_shell(f"'{path_to_python}' --version", cwd=working_directory)
-        await p.wait()
-        if p.returncode != 0:
-            logger.error(f"The provided python interpreter is not working. Please check the path and try again: {p}")
-            return
+    # print out installed python deps
+    logger.info(f"Installed python dependencies just now: `{python_dependencies}`")
+    env_var_python_deps = os.environ.get("PYTHON_DEPENDENCIES", "").split(" ")
+    logger.info(f"These dependencies were installed via env var in previous step: `{env_var_python_deps}`")
+    python_dependencies = env_var_python_deps
 
     # verify that the provided settings file exists
     if path_to_srt_settings is None:

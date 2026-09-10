@@ -3,6 +3,7 @@ import shutil
 import subprocess  # noqa: S404
 import traceback
 import uuid
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastmcp.utilities.types import Audio, File, Image
@@ -29,11 +30,31 @@ TypeReturnValue = list[CodeExecutionResult | EmbeddedResource | ImageContent | A
 class CodeExecutor(BaseModel):
     settings: CodeSandboxSettings
 
+    def _make_run_dir(self, *subdirs: str) -> Path:
+        path = self.settings.working_directory / uuid.uuid4().hex
+        for subdir in subdirs or ("",):
+            (path / subdir).mkdir(parents=True, exist_ok=True)
+        # make sure this is owned by the correct user
+        if self.settings.user:
+            shutil.chown(path, user=self.settings.user)
+            for subdir in subdirs:
+                shutil.chown(path / subdir, user=self.settings.user)
+        return path
+
     def model_post_init(self, context: Any, /) -> None:
         logger.info("Pre first run: Running pre-check to verify SRT CLI tool is available and working...")
 
         # check that it actually works (all deps installed)
-        p = subprocess.run(("srt", "-c", "python -c '1+1'"), capture_output=True)
+        check_path = self._make_run_dir()
+        try:
+            p = subprocess.run(  # noqa: S603
+                ("srt", "--settings", self.settings.path_to_srt_settings, "-c", "true"),
+                capture_output=True,
+                cwd=check_path,
+                user=self.settings.user,
+            )
+        finally:
+            shutil.rmtree(check_path)
         if p.returncode == 0:
             logger.info("Pre-check for SRT CLI tool succeeded!")
         else:
@@ -49,8 +70,7 @@ class CodeExecutor(BaseModel):
     ) -> TypeReturnValue:
         try:
             # create a temp working dir for the code to have write perms in
-            code_path = self.settings.working_directory / uuid.uuid4().hex
-            (code_path / "output").mkdir(parents=True)
+            code_path = self._make_run_dir("output")
 
             # write the code to a temp file
             code_file_path = code_path / "code.py"

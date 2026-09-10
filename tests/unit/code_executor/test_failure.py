@@ -57,11 +57,11 @@ from mcp_run_isolated_python.code_executor import CodeExecutionResult, CodeExecu
         ),
         pytest.param(
             """
-            import requests
-            requests.get("https://www.google.com")
+            import httpx2
+            httpx2.get("https://www.google.com")
             """,
             "",
-            """OSError: Tunnel connection failed""",
+            """httpx2.ProxyError: 403 Forbidden""",
             id="network request",
         ),
     ],

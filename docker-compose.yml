@@ -1,0 +1,14 @@
+# `systempaths=unconfined` is docker-CLI-only sugar (the CLI rewrites it into MaskedPaths/ReadonlyPaths
+# before calling the daemon). Clients that talk to the Engine API directly - the IntelliJ Dockerfile run
+# config, for one - forward the string as-is and get `Status 500: invalid --security-opt`.
+# Compose does the same rewrite as the CLI, so use this instead of a Dockerfile run config.
+services:
+  mcp-run-isolated-python:
+    build: .
+    ports:
+      - "8808:6400"
+    security_opt:
+      # see README for what each of these is for
+      - seccomp=./seccomp-bwrap.json
+      - systempaths=unconfined
+      - apparmor=mcp-bwrap # AppArmor hosts only (Ubuntu 23.10+), needs `setup_host.sh` on the docker host

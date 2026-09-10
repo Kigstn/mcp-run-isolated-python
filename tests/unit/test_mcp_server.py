@@ -18,8 +18,6 @@ async def test_start_mcp_server(settings: FullSettings):
     # test that the MCP server is up by sending a request
     try:
         async with Client("http://localhost:6400/mcp") as client:
-            await client.ping()
-
             tools = await client.list_tools()
             assert len(tools) == 1
 

@@ -13,7 +13,7 @@ async def test_cli_starts_mcp_server():
     # test that the MCP server is up by sending a request
     try:
         async with Client("http://localhost:6400/mcp") as client:
-            await client.ping()
+            await client.list_tools()
 
     # stop MCP server
     finally:

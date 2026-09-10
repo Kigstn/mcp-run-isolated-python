@@ -33,7 +33,7 @@ WORKDIR /code
 COPY . .
 
 # make sure the srt default config has the `enableWeakerNestedSandbox` set to true (needed for docker)
-# RUN sed -i 's/"enableWeakerNestedSandbox": *false/"enableWeakerNestedSandbox": true/' ./default_srt_settings.json
+RUN sed -i 's/"enableWeakerNestedSandbox": *false/"enableWeakerNestedSandbox": true/' ./default_srt_settings.json
 
 # Install project + deps into venv
 RUN uv sync --frozen --no-editable --no-dev
@@ -74,6 +74,4 @@ ENV PATH="/code/.venv/bin:$PATH"
 
 EXPOSE 6400
 
-ENTRYPOINT ["mcp-run-isolated-python", "--path_to_python='/sandbox/.venv/bin/python'", "--user=nonroot"]
-
-# todo create custom settings maybe?
+ENTRYPOINT ["mcp-run-isolated-python", "--path_to_python=/sandbox/.venv/bin/python", "--user=nonroot", "--mcp_host=0.0.0.0"]

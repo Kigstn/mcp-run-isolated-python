@@ -12,12 +12,25 @@ If you this, your LLM will always be able to count the number of "r" in strawber
 
 ### MCP - via Docker (recommended)
 
-WIP - support is suboptimal, as the anthropic sandbox runtime does currently only run in privileged docker running
-configs.
-Waiting on them to add proper support for containers, the existing options does not seem to do anything :D
+bubblewrap needs to create user, mount and pid namespaces, which the container has to be allowed to do.
+For this we have to set some security options on the container. 
 
-If you still want to use it, here is the command:
-`docker run --privileged .`
+This is mandatory - to my knowledge these are the miniumum needed permissions, but feel free to experiment :)
+
+```
+docker compose up --build
+```
+
+or, equivalently, by hand:
+
+```
+docker build -t mcp-run-isolated-python .
+docker run -p 6400:6400 \
+  --security-opt seccomp=./seccomp-bwrap.json \
+  --security-opt systempaths=unconfined \
+  --security-opt apparmor=mcp-bwrap \
+  mcp-run-isolated-python
+```
 
 You can pass your CLI settings directly after that, the dockerfile uses entrypoint to start the server and listens to
 all args.

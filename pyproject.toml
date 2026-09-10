@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.12.5",
     "rich>=14.3.2",
-    "fastmcp>=3.0.1",
+    "fastmcp>=4.0.3",
     "opentelemetry-api>=1.39.1",
     "structlog>=25.5.0",
     "filetype>=1.2.0",

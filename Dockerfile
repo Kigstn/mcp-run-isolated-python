@@ -41,7 +41,7 @@ RUN uv sync --frozen --no-editable --no-dev
 # ----------------------------
 # Final stage
 # ----------------------------
-# Then, use a final image without uv, but with node
+# Then, use a final image with uv and with node
 FROM node:${ENVIROMENT}
 LABEL authors="daniel.j"
 
@@ -63,6 +63,9 @@ RUN groupadd --system --gid 999 nonroot \
 # Copy the Python version
 COPY --from=builder --chown=python:python /python /python
 
+# uv, so users of the prebuilt image can add packages at runtime via -e PYTHON_DEPENDENCIES
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+
 # Copy project (with venv)
 COPY --from=builder --chown=nonroot:nonroot /code /code
 
@@ -74,4 +77,5 @@ ENV PATH="/code/.venv/bin:$PATH"
 
 EXPOSE 6400
 
-ENTRYPOINT ["mcp-run-isolated-python", "--path_to_python=/sandbox/.venv/bin/python", "--user=nonroot", "--mcp_host=0.0.0.0"]
+COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]

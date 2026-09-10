@@ -20,24 +20,16 @@ This is due to bubblewrap needing to create user, mount and pid namespaces, whic
 
 This is mandatory - to my knowledge these are the miniumum needed permissions, but feel free to experiment :)
 
-
-```
-docker compose up --build
-```
-
-or, equivalently, by hand:
-
 ```
 docker run -p 6400:6400 \
   --security-opt seccomp=unconfined \
   --security-opt apparmor=unconfined \
   --security-opt systempaths=unconfined \
-  --build-arg PYTHON_DEPENDENCIES="pydantic" \
+  -e PYTHON_DEPENDENCIES="pydantic numpy" \
   kigstn/mcp-run-isolated-python
 ```
 
-You can pass your CLI settings directly after that, the dockerfile uses entrypoint to start the server and listens to
-all args.
+You can pass your CLI settings directly after that, the dockerfile uses entrypoint to start the server and listens to all args.
 
 Note:
 
@@ -45,12 +37,27 @@ Note:
 - These three options only loosen the *container*. The code your LLM runs is still sandboxed by `srt` inside it -
   no network, no writes outside its temp dir, own pid namespace.
 - Docker automatically creates a separate UV python interpreter for the runtime - so you dont have to pass that :)
-- To control your python version & packages, use the docker build args `PYTHON_VERSION` and `PYTHON_DEPENDENCIES` (space
-  separated list)
+- To control your packages, use the env var `PYTHON_DEPENDENCIES` (space separated list). For greater control you need to build the image yourself
+- We provide a sample docker-compose file, which you can use to run the server with a single command. Just adapt the env vars to your needs.
 
 #### Configuration
 
-You can configure the docker container by passing the following arguments:
+To configure what packages are available to the LLM set `PYTHON_DEPENDENCIES` as an env var (space seperated list).
+
+```
+docker run ... -e PYTHON_DEPENDENCIES="numpy pandas" kigstn/mcp-run-isolated-python
+```
+
+Or bake your own image on top, which is better if you restart often, deploy offline, or want a pinned set:
+
+```dockerfile
+FROM kigstn/mcp-run-isolated-python
+RUN uv pip install --python /sandbox/.venv/bin/python numpy pandas
+```
+
+---
+
+Build args, if you build the image yourself:
 - `ENVIROMENT` - Default: "trixie-slim"
 - `PYTHON_VERSION` - Default: "3.13"
 - `PYTHON_DEPENDENCIES` - Default: "pydantic" (space separated list)

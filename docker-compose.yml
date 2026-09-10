@@ -1,6 +1,9 @@
 services:
   mcp-run-isolated-python:
-    build: .
+    build:
+      context: .
+      args:
+        PYTHON_DEPENDENCIES: "pydantic"
     ports:
       - "6400:6400"
     security_opt:

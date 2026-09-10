@@ -32,6 +32,7 @@ docker run -p 6400:6400 \
   --security-opt seccomp=unconfined \
   --security-opt apparmor=unconfined \
   --security-opt systempaths=unconfined \
+  --build-arg PYTHON_DEPENDENCIES="pydantic" \
   kigstn/mcp-run-isolated-python
 ```
 
@@ -47,6 +48,15 @@ Note:
 - To control your python version & packages, use the docker build args `PYTHON_VERSION` and `PYTHON_DEPENDENCIES` (space
   separated list)
 
+#### Configuration
+
+You can configure the docker container by passing the following arguments:
+- `ENVIROMENT` - Default: "trixie-slim"
+- `PYTHON_VERSION` - Default: "3.13"
+- `PYTHON_DEPENDENCIES` - Default: "pydantic" (space separated list)
+
+Consult the Dockerfile for detailed info
+
 ### MCP - via direct hosting
 
 `pip install mcp-run-isolated-python`
@@ -56,9 +66,10 @@ Then, just run the command to start the server:
 
 ### As a python package
 
-This approached is generally discouraged for any production use, as it removes a lot of this projects security features.
+This approached is generally discouraged for any production use, as it removes a lot of this projects security features. 
 
-But if you like to live dangerously, or you are the only one using this, or you are building a super quick prototype - this will be fine & should be safe, as it is still using sandboxed code execution.
+TBH - it should be fine, as this is used by procts such claude code in production on your PC.
+Just be warned :)
 
 ```py
 from mcp_run_isolated_python import CodeSandbox, CodeSandboxSettings
@@ -75,6 +86,8 @@ async with CodeSandbox(settings=settings) as sandbox:
     result = await sandbox.eval("print(1 + 1)")
     print(result)
 ```
+
+When using the library like this, it will use your current python interpreter and environment, so you will have to make sure that the packages you need are installed there.
 
 ---
 

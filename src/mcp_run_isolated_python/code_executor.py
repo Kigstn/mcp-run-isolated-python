@@ -1,6 +1,6 @@
 import os
 import shutil
-import subprocess  # noqa: S404
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import traceback
 import uuid
 from pathlib import Path
@@ -47,10 +47,11 @@ class CodeExecutor(BaseModel):
         # check that it actually works (all deps installed)
         check_path = self._make_run_dir()
         try:
-            p = subprocess.run(  # noqa: S603
-                ("srt", "--settings", self.settings.path_to_srt_settings, "-c", "true"),
+            p = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
+                ("srt", "--settings", self.settings.path_to_srt_settings, "-c", "true"),  # ruff: ignore[start-process-with-partial-path]
                 capture_output=True,
                 cwd=check_path,
+                check=False,
                 user=self.settings.user,
             )
         finally:
@@ -81,9 +82,10 @@ class CodeExecutor(BaseModel):
             logger.info("Running python code...", code=python_code, settings=self.settings.model_dump())
             try:
                 cmd = f""""{self.settings.path_to_python_interpreter}" "{code_file_path}" """
-                p = subprocess.run(  # noqa: S603
-                    ("srt", "--settings", self.settings.path_to_srt_settings, "-c", cmd),
+                p = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
+                    ("srt", "--settings", self.settings.path_to_srt_settings, "-c", cmd),  # ruff: ignore[start-process-with-partial-path]
                     cwd=code_path,
+                    check=False,
                     capture_output=True,
                     timeout=self.settings.code_timeout_seconds,
                     user=self.settings.user,

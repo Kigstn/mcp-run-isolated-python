@@ -4,7 +4,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.15.0
+    rev: v0.16.6
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -19,7 +19,7 @@ repos:
 
   # Gitleaks
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
         priority: 10

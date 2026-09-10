@@ -12,10 +12,14 @@ If you this, your LLM will always be able to count the number of "r" in strawber
 
 ### MCP - via Docker (recommended)
 
-bubblewrap needs to create user, mount and pid namespaces, which the container has to be allowed to do.
-For this we have to set some security options on the container. 
+For this to run we have to set some security options on the container.
+This is due to bubblewrap needing to create user, mount and pid namespaces, which the container has to be allowed to do:
+- seccomp=unconfined
+- apparmor=unconfined
+- systempaths=unconfined
 
 This is mandatory - to my knowledge these are the miniumum needed permissions, but feel free to experiment :)
+
 
 ```
 docker compose up --build
@@ -24,12 +28,11 @@ docker compose up --build
 or, equivalently, by hand:
 
 ```
-docker build -t mcp-run-isolated-python .
 docker run -p 6400:6400 \
-  --security-opt seccomp=./seccomp-bwrap.json \
+  --security-opt seccomp=unconfined \
+  --security-opt apparmor=unconfined \
   --security-opt systempaths=unconfined \
-  --security-opt apparmor=mcp-bwrap \
-  mcp-run-isolated-python
+  kigstn/mcp-run-isolated-python
 ```
 
 You can pass your CLI settings directly after that, the dockerfile uses entrypoint to start the server and listens to
@@ -37,6 +40,9 @@ all args.
 
 Note:
 
+- If you are running on Ubuntu 24 you will need to adapt your apparmor profile. We have a script, just run `setup_host.sh`. [More Info](https://github.com/anthropics/sandbox-runtime/blob/main/.github/workflows/integration-tests.yml#L152)
+- These three options only loosen the *container*. The code your LLM runs is still sandboxed by `srt` inside it -
+  no network, no writes outside its temp dir, own pid namespace.
 - Docker automatically creates a separate UV python interpreter for the runtime - so you dont have to pass that :)
 - To control your python version & packages, use the docker build args `PYTHON_VERSION` and `PYTHON_DEPENDENCIES` (space
   separated list)

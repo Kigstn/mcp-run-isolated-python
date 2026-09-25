@@ -6,6 +6,10 @@ services:
       PYTHON_DEPENDENCIES: "pydantic"
     ports:
       - "6400:6400"
+    # bound what sandboxed code can take from the host
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 2
     security_opt:
       - seccomp=unconfined
       - apparmor=unconfined

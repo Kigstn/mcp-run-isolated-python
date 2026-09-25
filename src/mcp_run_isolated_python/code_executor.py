@@ -2,10 +2,12 @@ import contextlib
 import json
 import mimetypes
 import os
+import pwd
 import shutil
 import signal
 import stat
 import subprocess  # ruff: ignore[suspicious-subprocess-import]
+import sys
 import tempfile
 import threading
 import traceback
@@ -28,6 +30,10 @@ logger = get_logger(__name__)
 MAX_OUTPUT_BYTES = 1_000_000
 # max size of a single returned ./output file; bigger files are skipped
 MAX_OUTPUT_FILE_BYTES = 100_000_000
+# max total size of all returned ./output files; files past this budget are skipped
+MAX_TOTAL_OUTPUT_FILE_BYTES = 200_000_000
+# max processes of the sandbox user; keeps a fork bomb from starving the server (shared by concurrent runs)
+MAX_SANDBOX_PROCESSES = 256
 
 
 class CodeExecutionResult(BaseModel):
@@ -48,6 +54,21 @@ def _drain(stream: IO[bytes], buf: bytearray) -> None:
 def _decode(buf: bytearray) -> str:
     text = buf[:MAX_OUTPUT_BYTES].decode(errors="replace").strip()
     return text + "\n[output truncated]" if len(buf) > MAX_OUTPUT_BYTES else text
+
+
+def _remove_run_dir(path: Path) -> None:
+    # sandbox code owning its dirs (same-uid mode) can chmod them to block removal: unlock them first.
+    # top-down walk unlocks each dir before entering it; symlinks are never chmodded or followed
+    with contextlib.suppress(OSError):
+        path.chmod(stat.S_IRWXU)
+    for root, dirs, _ in os.walk(path):
+        for name in dirs:
+            if not (sub := Path(root) / name).is_symlink():
+                with contextlib.suppress(OSError):
+                    sub.chmod(stat.S_IRWXU)
+    shutil.rmtree(path, ignore_errors=True)
+    if path.exists():
+        logger.error("Could not fully remove run directory", path=str(path))
 
 
 class CodeExecutor(BaseModel):
@@ -72,6 +93,16 @@ class CodeExecutor(BaseModel):
         fs = srt_settings.setdefault("filesystem", {})
         fs.setdefault("denyRead", []).append(str(self.settings.working_directory.resolve()))
         fs.setdefault("allowRead", []).append(".")
+        # srt always makes these writable (shared by all runs & surviving cleanup), so deny them again
+        home = Path(pwd.getpwnam(self.settings.user).pw_dir) if self.settings.user else Path.home()
+        fs.setdefault("denyWrite", []).extend(
+            [
+                "/tmp/claude",  # ruff: ignore[hardcoded-temp-file]
+                "/private/tmp/claude",
+                str(home / ".npm" / "_logs"),
+                str(home / ".claude" / "debug"),
+            ]
+        )
         fd, path = tempfile.mkstemp(prefix="srt-settings-", suffix=".json")
 
         with os.fdopen(fd, "w") as file:
@@ -89,6 +120,7 @@ class CodeExecutor(BaseModel):
             p = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
                 ("srt", "--settings", self._srt_settings, "-c", "true"),  # ruff: ignore[start-process-with-partial-path]
                 capture_output=True,
+                stdin=subprocess.DEVNULL,
                 cwd=check_path,
                 check=False,
                 user=self.settings.user,
@@ -107,11 +139,12 @@ class CodeExecutor(BaseModel):
         proc = subprocess.Popen(  # ruff: ignore[subprocess-without-shell-equals-true]
             ("srt", "--settings", self._srt_settings, "-c", cmd),  # ruff: ignore[start-process-with-partial-path]
             cwd=code_path,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             user=self.settings.user,
-            # limit the env vars, just need path
-            env={"PATH": os.environ.get("PATH", "")},
+            # limit the env vars, just need path (+ keep srt's TMPDIR inside the run dir)
+            env={"PATH": os.environ.get("PATH", ""), "CLAUDE_CODE_TMPDIR": str(code_path.resolve())},
             # own process group, so a timeout can kill the whole sandbox & not just srt
             start_new_session=True,
         )
@@ -149,6 +182,7 @@ class CodeExecutor(BaseModel):
         # the output dir is writable by the sandbox: never follow symlinks (could point at files only the server
         # can read) & only return regular, not hard-linked files of bounded size
         responses: TypeReturnValue = []
+        total = 0
         dir_fd = os.open(output_path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             for name in os.listdir(dir_fd):  # ruff: ignore[os-listdir]  (fd-based: iterdir would follow a symlinked dir)
@@ -164,9 +198,10 @@ class CodeExecutor(BaseModel):
                     continue
                 with os.fdopen(fd, "rb") as file:
                     data = file.read(MAX_OUTPUT_FILE_BYTES + 1)
-                if len(data) > MAX_OUTPUT_FILE_BYTES:
+                if len(data) > MAX_OUTPUT_FILE_BYTES or total + len(data) > MAX_TOTAL_OUTPUT_FILE_BYTES:
                     logger.warning("Skipping output file that is too big", name=name)
                     continue
+                total += len(data)
 
                 type_guess = guess(data)
 
@@ -203,7 +238,16 @@ class CodeExecutor(BaseModel):
 
             # run the code
             logger.info("Running python code...", code=python_code, settings=self.settings.model_dump())
-            cmd = f""""{self.settings.path_to_python_interpreter}" "{code_file_path}" """
+            # best-effort limits (a lower hard limit is kept); on linux, a fresh ipc namespace per run
+            limits = (
+                f"ulimit -u {MAX_SANDBOX_PROCESSES} 2>/dev/null; ulimit -f {MAX_OUTPUT_FILE_BYTES // 1024} 2>/dev/null"
+            )
+            ipc = (
+                "unshare --ipc --user --map-current-user "
+                if sys.platform == "linux" and shutil.which("unshare")
+                else ""
+            )
+            cmd = f"""{limits}; exec {ipc}"{self.settings.path_to_python_interpreter}" "{code_file_path}" """
             result = self._run_sandboxed(code_path, cmd)
 
             # return output files
@@ -220,4 +264,4 @@ class CodeExecutor(BaseModel):
         finally:
             # remove temp directory & all files, also when the run failed
             if code_path is not None:
-                shutil.rmtree(code_path, ignore_errors=True)
+                _remove_run_dir(code_path)

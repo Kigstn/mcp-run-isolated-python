@@ -4,6 +4,9 @@ import time
 import uuid
 from pathlib import Path
 
+import pytest
+
+import mcp_run_isolated_python.code_executor as code_executor_module
 from mcp_run_isolated_python.code_executor import MAX_OUTPUT_BYTES, CodeExecutionResult, CodeExecutor
 from mcp_run_isolated_python.utils.settings import FullSettings
 
@@ -107,3 +110,31 @@ def test_other_runs_are_not_readable(code_executor: CodeExecutor) -> None:
     assert result.output == "False"
     assert "SECRET" not in (result.error or "")
     assert "Error" in (result.error or "")
+
+
+def test_stdin_is_not_inherited(code_executor: CodeExecutor) -> None:
+    result, _ = run(code_executor, "import sys; print(repr(sys.stdin.read()))")
+    assert result.output == "''"
+
+
+def test_locked_run_dir_is_removed(code_executor: CodeExecutor) -> None:
+    before = set(code_executor.settings.working_directory.iterdir())
+    result, _ = run(
+        code_executor,
+        """
+        import os
+        os.makedirs("locked/inner")
+        open("locked/inner/f", "w").write("x")
+        os.chmod("locked/inner", 0)
+        os.chmod("locked", 0o500)
+        """,
+    )
+    assert result.status == "success"
+    assert set(code_executor.settings.working_directory.iterdir()) == before
+
+
+def test_total_output_size_is_bounded(code_executor: CodeExecutor, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(code_executor_module, "MAX_TOTAL_OUTPUT_FILE_BYTES", 2500)
+    result, files = run(code_executor, "for i in range(4): open(f'output/f{i}.bin', 'wb').write(b'x' * 1000)")
+    assert result.status == "success"
+    assert len(files) == 2

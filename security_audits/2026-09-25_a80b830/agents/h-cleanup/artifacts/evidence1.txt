@@ -1,0 +1,52 @@
+Check: _remove_run_dir fails on deep directory tree created by sandboxed code (Docker mode: server root, sandbox user nonroot, real srt+bwrap)
+Command: python3 sbx.py h-cleanup --srt -- 'cd /scratch && for i in 1 2 3; do python e2e.py 2100; done; du -sb /work/wd; rm -rf /work/wd; python e2e.py 300'
+Limits: sbx --srt (network none, ro rootfs, 512m, 128 pids, nofile 512, 120s). Env: PATH, HOME=/tmp, PYTHONPATH=/target/src
+--- e2e.py ---
+import os, sys
+from pathlib import Path
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+from mcp_run_isolated_python.code_executor import CodeExecutor
+DEPTH = int(sys.argv[1])
+wd = Path("/work/wd"); wd.mkdir(exist_ok=True); os.chmod(wd, 0o755)
+ex = CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=30, user="nonroot",
+    path_to_srt_settings=Path("/code/default_srt_settings.json"), working_directory=wd,
+    path_to_python_interpreter=Path("/sandbox/.venv/bin/python")))
+code = f'''
+import os
+fd = os.open(".", os.O_RDONLY)
+for i in range({DEPTH}):
+    os.mkdir("d", dir_fd=fd); n = os.open("d", os.O_RDONLY, dir_fd=fd); os.close(fd); fd = n
+f = os.open("leftover.bin", os.O_WRONLY|os.O_CREAT, 0o644, dir_fd=fd); os.write(f, b"x"*1_000_000); os.close(f)
+print("made depth", {DEPTH}, "uid", os.getuid())
+'''
+try:
+    res = ex.run_python_code(code)
+    print("tool returned:", res[0].status, res[0].output[:80], (res[0].error or "")[:200])
+except BaseException as e:
+    import traceback
+    print("EXCEPTION escaped run_python_code:", type(e).__name__, str(e)[:80])
+    print("\n".join(l[:120] for l in traceback.format_exc().splitlines()[-9:-1]))
+left = [p.name for p in wd.iterdir()]
+print("entries left in working dir after cleanup:", left)
+for p in wd.iterdir():
+    total = 0
+    for r, ds, fs in os.walk(p, onerror=lambda e: None):
+        for f in fs: total += os.lstat(os.path.join(r, f)).st_size
+    print(p.name, "bytes left (reachable by walk):", total)
+--- output ---
+# nofile: 512
+EXCEPTION escaped run_python_code: OSError [Errno 36] File name too long: '/work/wd/0b8e797e2d7348a5973ec616517ff181/d/d/d/
+entries left in working dir after cleanup: ['0b8e797e2d7348a5973ec616517ff181']
+EXCEPTION escaped run_python_code: OSError [Errno 36] File name too long: '/work/wd/b63b839227804e8fa3d37e8b956998c4/d/d/d/
+entries left in working dir after cleanup: ['b63b839227804e8fa3d37e8b956998c4', '0b8e797e2d7348a5973ec616517ff181']
+EXCEPTION escaped run_python_code: OSError [Errno 36] File name too long: '/work/wd/f0ea6caeeec842a18460ddc3989aeb14/d/d/d/
+entries left in working dir after cleanup: ['f0ea6caeeec842a18460ddc3989aeb14', 'b63b839227804e8fa3d37e8b956998c4', '0b8e797e2d7348a5973ec616517ff181']
+# du of working dir after 3 runs:
+3000945	/work/wd
+# control run depth 300:
+tool returned: success made depth 300 uid 999 
+entries left in working dir after cleanup: []
+--- note ---
+Depth 2100 (path > PATH_MAX 4096): Path.is_symlink() at code_executor.py:66 raises ENAMETOOLONG outside contextlib.suppress; exception escapes the finally block, shutil.rmtree never runs; run dir + 1,000,000-byte file persist, accumulating per run. Depth 300 control is removed.
+Separately, depths 700/900 (below PATH_MAX) were also left behind under nofile=512 because 3.13 shutil.rmtree keeps one fd per level and ignore_errors hides EMFILE (logged 'Could not fully remove run directory').
+GNU 'rm -rf' removed the depth-2100 tree in the same container (rc=0, 0 entries left).

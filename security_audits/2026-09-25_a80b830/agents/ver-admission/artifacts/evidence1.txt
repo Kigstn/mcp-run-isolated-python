@@ -1,0 +1,10 @@
+ver-admission evidence1: FastMCP HTTP dispatch of run_python_code is capped by the shared 40-token anyio pool
+Harness: scratch/h.py. Real mcp_server.run_mcp (FastMCP 4.0.3, transport=http, stateless=True, 127.0.0.1:6400/mcp) and real
+CodeExecutor.run_python_code; only the srt pre-check and CodeExecutor._run_sandboxed body were replaced by time.sleep(8)
+(stand-in for proc.wait(timeout) at code_executor.py:160 holding the worker thread). Sandbox: sbx.py ver-admission (no network).
+Server process: anyio.to_thread.current_default_thread_limiter().total_tokens = 40
+N attackers (concurrent tools/call, separate clients) then 1.5 s later one victim tools/call:
+  N_attackers=39 run_hold=8.0s victim_latency=8.02s   (victim waits only for its own 8 s run)
+  N_attackers=40 run_hold=8.0s victim_latency=14.62s  (victim queued ~6.6 s = remaining attacker hold, then its own 8 s)
+Installed dispatch path: fastmcp/tools/function_tool.py:477 call_sync_fn_in_threadpool -> fastmcp/utilities/async_utils.py:34
+anyio.to_thread.run_sync (no limiter arg) -> anyio/_backends/_asyncio.py:3038 CapacityLimiter(40).

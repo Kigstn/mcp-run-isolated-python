@@ -1,0 +1,45 @@
+Check (ver-rmlock): proposed remediation (fwalk/fchmod unlock in try/except + rm -rf fallback) monkeypatched over code_executor._remove_run_dir, same harness v.py, same sbx --srt environment.
+Command: python3 sbx.py ver-rmlock --srt -- 'cd /scratch && python fix.py 2100 900 ...; ls /work/wd | wc -l'
+--- fix.py ---
+import contextlib, os, shutil, stat, subprocess, runpy, sys
+from pathlib import Path
+import mcp_run_isolated_python.code_executor as ce
+def _remove_run_dir(path: Path) -> None:
+    try:
+        with contextlib.suppress(OSError):
+            path.chmod(stat.S_IRWXU)
+        for _, dirs, _, root_fd in os.fwalk(path, onerror=lambda e: None):
+            for name in dirs:
+                with contextlib.suppress(OSError):
+                    fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root_fd)
+                    try:
+                        os.fchmod(fd, stat.S_IRWXU)
+                    finally:
+                        os.close(fd)
+        shutil.rmtree(path, ignore_errors=True)
+    except Exception:
+        ce.logger.exception("Run dir cleanup raised", path=str(path))
+    if os.path.lexists(path):
+        subprocess.run(("rm", "-rf", "--", str(path)), stdin=subprocess.DEVNULL, check=False)
+    if os.path.lexists(path):
+        ce.logger.error("Could not fully remove run directory", path=str(path))
+ce._remove_run_dir = _remove_run_dir
+print("# PATCHED _remove_run_dir (proposed fix)")
+sys.argv = ["v.py", *sys.argv[1:]]
+runpy.run_path("v.py", run_name="__main__")
+--- output ---
+# PATCHED _remove_run_dir (proposed fix)
+2026-09-25T12:02:52.681008Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/null; exec unshare --ipc --user --map-curren
+2026-09-25T12:02:52.687704Z [error    ] Run dir cleanup raised                                       path=/work/wd/b8b0136fa4b4404fada0072582f65b95 span=None
+│ ❱  8 │   │   for _, dirs, _, root_fd in os.fwalk(path, onerror=lambda e: None):               │      fd = 511                                                    │               │
+[depth 2100] tool returned: success made depth 2100 uid 999
+[depth 2100] new entries left: []
+2026-09-25T12:02:53.388598Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/null; exec unshare --ipc --user --map-curren
+2026-09-25T12:02:53.395839Z [error    ] Run dir cleanup raised                                       path=/work/wd/f68294eff27843b6a639b88a5e44d149 span=None
+│ ❱  8 │   │   for _, dirs, _, root_fd in os.fwalk(path, onerror=lambda e: None):               │      fd = 511                                                    │               │
+[depth 900] tool returned: success made depth 900 uid 999
+[depth 900] new entries left: []
+# entries:
+0
+--- note ---
+os.fwalk also holds one fd per level and raised EMFILE (fd = 511) at depth ~500; the try/except kept removal going and the rm -rf fallback removed both trees (0 entries left).

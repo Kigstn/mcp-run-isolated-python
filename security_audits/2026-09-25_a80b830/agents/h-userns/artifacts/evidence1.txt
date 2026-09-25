@@ -1,0 +1,32 @@
+# Command (host): python3 sbx.py h-userns --srt -- 'cd /scratch && python /scratch/h.py /scratch/p4.py'
+# h.py: CodeExecutor(CodeSandboxSettings(user='nonroot', path_to_srt_settings=/code/default_srt_settings.json (enableWeakerNestedSandbox=true), working_directory=/scratch/wd, python=/sandbox/.venv/bin/python)).run_python_code(open(p4.py).read())
+# dummy sibling run dir /scratch/wd/deadbeefsibling/code.py created beforehand (must stay hidden)
+## p4.py
+import subprocess as sp
+def sh(c): r=sp.run(c,shell=True,capture_output=True,text=True); print("$",c,"\n  ->",r.returncode,(r.stdout+r.stderr).strip()[:500])
+sh("id -u; grep -E 'CapEff|NoNewPrivs|Seccomp:' /proc/self/status | tr '\\n' ' '; readlink /proc/self/ns/user /proc/self/ns/ipc | tr '\\n' ' '")
+sh("unshare --mount true")
+UM = r'''import ctypes,os;l=ctypes.CDLL(None,use_errno=True)
+for p in ["/scratch/wd",os.getcwd(),"/"]:
+  r=l.umount2(p.encode(),2);print(p.replace(os.getcwd(),"<rundir>"),r,os.strerror(ctypes.get_errno()))
+r=l.mount(b"none",b"/",None,0x1000|0x20|0x4000,None) if False else None'''
+open("um.py","w").write(UM)
+sh("unshare --user --map-root-user --mount sh -c 'grep CapEff /proc/self/status; /sandbox/.venv/bin/python um.py; mount -o remount,bind,rw / 2>&1|head -1; ls /scratch/wd'")
+sh("ls /scratch/wd")
+## output (sandboxed code stdout)
+===== /scratch/p4.py
+$ id -u; grep -E 'CapEff|NoNewPrivs|Seccomp:' /proc/self/status | tr '\n' ' '; readlink /proc/self/ns/user /proc/self/ns/ipc | tr '\n' ' ' 
+  -> 0 999
+CapEff:	0000000000000000 NoNewPrivs:	1 Seccomp:	2 user:[4026533171] ipc:[4026533172]
+$ unshare --mount true 
+  -> 1 unshare: unshare failed: Operation not permitted
+$ unshare --user --map-root-user --mount sh -c 'grep CapEff /proc/self/status; /sandbox/.venv/bin/python um.py; mount -o remount,bind,rw / 2>&1|head -1; ls /scratch/wd' 
+  -> 0 CapEff:	000001ffffffffff
+/scratch/wd -1 Invalid argument
+<rundir> -1 Invalid argument
+/ -1 Invalid argument
+mount: /: permission denied.
+8d9efb85076c4d76925d10c9f9fc4527
+$ ls /scratch/wd 
+  -> 0 8d9efb85076c4d76925d10c9f9fc4527
+ERR: None

@@ -53,6 +53,9 @@ async def run_mcp(settings: FullSettings):
         port=settings.port,
         path=settings.path,
         show_banner=False,
+        # reject foreign Host / Origin headers (DNS rebinding from a website against a localhost server)
+        host_origin_protection=True,
+        allowed_hosts=settings.allowed_hosts,
     )
 
 

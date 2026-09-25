@@ -1,0 +1,4 @@
+fs base: /dev/shm/vmf source: /target/src/mcp_run_isolated_python/code_executor.py
+dummy_file (regular file) mode set before each iteration: 0o444
+iterations: 9 hit: (9, '0o700', 0.0)
+RESULT: race WON: _remove_run_dir chmod'ed the out-of-run-dir symlink target to 0o700

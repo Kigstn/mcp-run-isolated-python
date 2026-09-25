@@ -1,7 +1,12 @@
 import logging
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
+
+
+def _env_list(name: str) -> list[str] | None:
+    return [h.strip() for h in os.environ.get(name, "").split(",") if h.strip()] or None
 
 
 class CodeSandboxSettings(BaseModel):
@@ -20,6 +25,7 @@ class FullSettings(CodeSandboxSettings):
     path: str
     log_level: int
     installed_python_dependencies: list[str] = Field(default_factory=list)
+    allowed_hosts: list[str] | None = Field(default_factory=lambda: _env_list("MCP_ALLOWED_HOSTS"))
 
     @classmethod
     def using_defaults(cls) -> "FullSettings":

@@ -1,0 +1,12 @@
+Command: python3 sbx.py h-misc --srt -- 'python /scratch/t5.py' (same Docker-mode settings).
+Sandboxed code: import os, shutil; shutil.rmtree('output'); os.symlink('/etc', 'output')
+Returned to client:
+RESULT: failure Tool run failed. Do not call this tool again, inform the user that it is broken.
+ERR: Traceback (most recent call last):
+  File "/target/src/mcp_run_isolated_python/code_executor.py", line 254, in run_python_code
+    return [result, *self._collect_output_files(code_path / "output")]
+  File "/target/src/mcp_run_isolated_python/code_executor.py", line 186, in _collect_output_files
+    dir_fd = os.open(output_path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+NotADirectoryError: [Errno 20] Not a directory: '/scratch/wd/<uuid>/output'
+Run dir afterwards: os.listdir('/scratch/wd') -> []  (cleanup ran; /etc not followed)
+=> traceback discloses only server package path and the run's own path (already known to the sandbox); no file content, secret, or other-run data.

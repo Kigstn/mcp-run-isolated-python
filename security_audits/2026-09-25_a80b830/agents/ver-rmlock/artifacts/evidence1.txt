@@ -1,0 +1,75 @@
+Check (ver-rmlock): current source a80b830 _remove_run_dir vs deep sandbox-created trees. Docker-equivalent: server root, code user nonroot uid 999, real srt+bwrap, Python 3.13.15, nofile 512.
+Command: python3 sbx.py ver-rmlock --srt -- 'cd /scratch && python v.py 300 2100 2100 900; du -sb /work/wd; ls /work/wd | wc -l'  (payload writes a 1000-byte leftover.bin at the bottom)
+--- v.py ---
+import os, sys, traceback, resource
+from pathlib import Path
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+from mcp_run_isolated_python.code_executor import CodeExecutor
+
+print("python", sys.version.split()[0], "nofile", resource.getrlimit(resource.RLIMIT_NOFILE))
+wd = Path("/work/wd"); wd.mkdir(exist_ok=True); os.chmod(wd, 0o755)
+ex = CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=30, user="nonroot",
+    path_to_srt_settings=Path("/code/default_srt_settings.json"), working_directory=wd,
+    path_to_python_interpreter=Path("/sandbox/.venv/bin/python")))
+for depth in [int(a) for a in sys.argv[1:]]:
+    code = f'''
+import os
+fd = os.open(".", os.O_RDONLY)
+for i in range({depth}):
+    os.mkdir("d", dir_fd=fd); n = os.open("d", os.O_RDONLY, dir_fd=fd); os.close(fd); fd = n
+f = os.open("leftover.bin", os.O_WRONLY|os.O_CREAT, 0o644, dir_fd=fd); os.write(f, b"x"*1000); os.close(f)
+print("made depth", {depth}, "uid", os.getuid())
+'''
+    before = set(os.listdir(wd))
+    try:
+        res = ex.run_python_code(code)
+        print(f"[depth {depth}] tool returned:", res[0].status, res[0].output[:60])
+    except BaseException as e:
+        print(f"[depth {depth}] EXCEPTION escaped run_python_code:", type(e).__name__, str(e)[:60])
+        for l in traceback.format_exc().splitlines():
+            print("   ", l[:140])
+    print(f"[depth {depth}] new entries left:", sorted(set(os.listdir(wd)) - before))
+--- output (ANSI stripped, lines cut at 200) ---
+python 3.13.15 nofile (512, 512)
+2026-09-25T12:02:28.639595Z [info     ] Running python code...                                       code='\nimport os\nfd = os.open(".", os.O_RDONLY)\nfor i
+2026-09-25T12:02:28.858507Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/n
+[depth 300] tool returned: success made depth 300 uid 999
+[depth 300] new entries left: []
+2026-09-25T12:02:28.899298Z [info     ] Running python code...                                       code='\nimport os\nfd = os.open(".", os.O_RDONLY)\nfor i
+2026-09-25T12:02:29.329329Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/n
+[depth 2100] EXCEPTION escaped run_python_code: OSError [Errno 36] File name too long: '/work/wd/02f8f6b7b5e546618db
+        res = ex.run_python_code(code)
+      File "/target/src/mcp_run_isolated_python/code_executor.py", line 267, in run_python_code
+      File "/target/src/mcp_run_isolated_python/code_executor.py", line 66, in _remove_run_dir
+        if not (sub := Path(root) / name).is_symlink():
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_abc.py", line 518, in is_symlink
+        return S_ISLNK(self.lstat().st_mode)
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_abc.py", line 437, in lstat
+        return self.stat(follow_symlinks=False)
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_local.py", line 515, in stat
+        return os.stat(self, follow_symlinks=follow_symlinks)
+    OSError: [Errno 36] File name too long: '/work/wd/02f8f6b7b5e546618db8cc671c00c9de/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d
+[depth 2100] new entries left: ['02f8f6b7b5e546618db8cc671c00c9de']
+2026-09-25T12:02:30.295304Z [info     ] Running python code...                                       code='\nimport os\nfd = os.open(".", os.O_RDONLY)\nfor i
+2026-09-25T12:02:30.516142Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/n
+[depth 2100] EXCEPTION escaped run_python_code: OSError [Errno 36] File name too long: '/work/wd/431e83db99804dfaa23
+        res = ex.run_python_code(code)
+      File "/target/src/mcp_run_isolated_python/code_executor.py", line 267, in run_python_code
+      File "/target/src/mcp_run_isolated_python/code_executor.py", line 66, in _remove_run_dir
+        if not (sub := Path(root) / name).is_symlink():
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_abc.py", line 518, in is_symlink
+        return S_ISLNK(self.lstat().st_mode)
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_abc.py", line 437, in lstat
+        return self.stat(follow_symlinks=False)
+      File "/python/cpython-3.13.15-linux-aarch64-gnu/lib/python3.13/pathlib/_local.py", line 515, in stat
+        return os.stat(self, follow_symlinks=follow_symlinks)
+    OSError: [Errno 36] File name too long: '/work/wd/431e83db99804dfaa23d1934f6166a28/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d
+[depth 2100] new entries left: ['431e83db99804dfaa23d1934f6166a28']
+2026-09-25T12:02:31.180292Z [info     ] Running python code...                                       code='\nimport os\nfd = os.open(".", os.O_RDONLY)\nfor i
+2026-09-25T12:02:31.296480Z [info     ] Command executed                                             cmd='ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/n
+[depth 900] tool returned: success made depth 900 uid 999
+[depth 900] new entries left: ['7debe8239c5345cea26d05670798066c']
+# du -sb of working dir after runs:
+3620	/work/wd
+# entries:
+3

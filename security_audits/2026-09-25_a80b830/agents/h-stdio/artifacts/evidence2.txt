@@ -1,0 +1,43 @@
+Check: sandbox-controlled output entry names reach the server log stream (stdout) with raw control bytes
+Command: sbx.py h-stdio --srt -- 'cd /code && python /scratch/esc.py > /scratch/esc_stdout.bin'
+esc.py: CodeSandbox(CodeSandboxSettings(user='nonroot', path_to_srt_settings=/code/default_srt_settings.json, path_to_python_interpreter=/sandbox/.venv/bin/python, working_directory=/scratch/wd2)).eval(CODE)
+CODE (runs inside srt/bwrap as uid 999):
+CODE = ("import os\n"
+        "os.mkdir('output/' + '\\x1b[2K\\r2026-01-01 [info] FAKE-LINE-FROM-SANDBOX' + '\\n')\n"
+        "os.mkdir('output/' + '\\x1b]0;SANDBOX-TITLE\\x07')\n"
+        "print('out\\x1b[31mRED')\n")
+
+Relevant server stdout lines (od -c):
+0000000  033   [   2   m   2   0   2   6   -   0   9   -   2   5   T   1
+0000020    1   :   5   3   :   0   3   .   1   7   3   1   2   6   Z 033
+0000040    [   0   m       [ 033   [   3   3   m 033   [   1   m   w   a
+0000060    r   n   i   n   g         033   [   0   m   ]     033   [   1
+0000100    m   S   k   i   p   p   i   n   g       o   u   t   p   u   t
+0000120        e   n   t   r   y       t   h   a   t       i   s       n
+0000140    o   t       a       r   e   g   u   l   a   r       f   i   l
+0000160    e                                                 033   [   0
+0000200    m     033   [   3   6   m   n   a   m   e 033   [   0   m   =
+0000220  033   [   3   5   m 033   ]   0   ;   S   A   N   D   B   O   X
+0000240    -   T   I   T   L   E  \a 033   [   0   m     033   [   3   6
+0000260    m   s   p   a   n 033   [   0   m   = 033   [   3   5   m   N
+0000300    o   n   e 033   [   0   m  \n 033   [   2   m   2   0   2   6
+0000320    -   0   9   -   2   5   T   1   1   :   5   3   :   0   3   .
+0000340    1   9   1   0   1   5   Z 033   [   0   m       [ 033   [   3
+0000360    3   m 033   [   1   m   w   a   r   n   i   n   g         033
+0000400    [   0   m   ]     033   [   1   m   S   k   i   p   p   i   n
+0000420    g       o   u   t   p   u   t       e   n   t   r   y       t
+0000440    h   a   t       i   s       n   o   t       a       r   e   g
+0000460    u   l   a   r       f   i   l   e                            
+0000500                      033   [   0   m     033   [   3   6   m   n
+0000520    a   m   e 033   [   0   m   = 033   [   3   5   m   '   \   x
+0000540    1   b   [   2   K   \   r   2   0   2   6   -   0   1   -   0
+0000560    1       [   i   n   f   o   ]       F   A   K   E   -   L   I
+0000600    N   E   -   F   R   O   M   -   S   A   N   D   B   O   X   \
+0000620    n   ' 033   [   0   m     033   [   3   6   m   s   p   a   n
+0000640  033   [   0   m   = 033   [   3   5   m   N   o   n   e 033   [
+0000660    0   m  \n                                                    
+0000663
+
+Result: entry without space/tab/=/CR/LF/quote -> emitted RAW: 033 ] 0 ; SANDBOX-TITLE  (OSC 0 set-title sequence) ; entry containing CR/LF -> repr-quoted (structlog/dev.py:923-926 ConsoleRenderer._repr only quotes strings containing {' ','	','=','','
+','"',"'"})
+Sandbox stdout in result= is dict-repr'd (escaped as ), so only str-valued fields (name=, code=) are raw.

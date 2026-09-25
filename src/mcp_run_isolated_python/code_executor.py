@@ -32,8 +32,13 @@ MAX_OUTPUT_BYTES = 1_000_000
 MAX_OUTPUT_FILE_BYTES = 100_000_000
 # max total size of all returned ./output files; files past this budget are skipped
 MAX_TOTAL_OUTPUT_FILE_BYTES = 200_000_000
-# max processes of the sandbox user; keeps a fork bomb from starving the server (shared by concurrent runs)
-MAX_SANDBOX_PROCESSES = 256
+# max concurrent runs; more wait for a free slot
+MAX_CONCURRENT_RUNS = 4
+# max processes per run (per run on linux, via the user namespace of `unshare`).
+# MAX_CONCURRENT_RUNS * this (+ srt / bwrap threads & the server) must stay below the container pids_limit (512)
+MAX_SANDBOX_PROCESSES = 64
+
+_run_slots = threading.BoundedSemaphore(MAX_CONCURRENT_RUNS)
 
 
 class CodeExecutionResult(BaseModel):
@@ -57,17 +62,25 @@ def _decode(buf: bytearray) -> str:
 
 
 def _remove_run_dir(path: Path) -> None:
-    # sandbox code owning its dirs (same-uid mode) can chmod them to block removal: unlock them first.
-    # top-down walk unlocks each dir before entering it; symlinks are never chmodded or followed
-    with contextlib.suppress(OSError):
-        path.chmod(stat.S_IRWXU)
-    for root, dirs, _ in os.walk(path):
-        for name in dirs:
-            if not (sub := Path(root) / name).is_symlink():
+    try:
+        # sandbox code owning its dirs (same-uid mode) can chmod them to block removal: unlock them first.
+        # top-down walk unlocks each dir before entering it; symlinks are never chmodded or followed
+        with contextlib.suppress(OSError):
+            path.chmod(stat.S_IRWXU)
+        for root, dirs, _ in os.walk(path):
+            for name in dirs:
                 with contextlib.suppress(OSError):
-                    sub.chmod(stat.S_IRWXU)
-    shutil.rmtree(path, ignore_errors=True)
-    if path.exists():
+                    if not (sub := Path(root) / name).is_symlink():
+                        sub.chmod(stat.S_IRWXU)
+        shutil.rmtree(path, ignore_errors=True)
+    except Exception:
+        logger.exception("Run dir cleanup raised", path=str(path))
+    if os.path.lexists(path):
+        # the sandbox controls the tree depth (> PATH_MAX, > fd limit): chmod -R / rm -rf handle both
+        for cmd in (("chmod", "-R", "-P", "--", "u+rwx", str(path)), ("rm", "-rf", "--", str(path))):
+            with contextlib.suppress(OSError):
+                subprocess.run(cmd, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)  # ruff: ignore[subprocess-without-shell-equals-true]
+    if os.path.lexists(path):
         logger.error("Could not fully remove run directory", path=str(path))
 
 
@@ -226,6 +239,9 @@ class CodeExecutor(BaseModel):
         self,
         python_code: Annotated[str, "The python code to execute"],
     ) -> TypeReturnValue:
+        if not _run_slots.acquire(blocking=False):
+            logger.info("All run slots are busy, waiting for a free one...")
+            _run_slots.acquire()
         code_path = None
         try:
             # create a temp working dir for the code to have write perms in
@@ -265,3 +281,4 @@ class CodeExecutor(BaseModel):
             # remove temp directory & all files, also when the run failed
             if code_path is not None:
                 _remove_run_dir(code_path)
+            _run_slots.release()

@@ -1,0 +1,39 @@
+Command: python3 sbx.py h-samesrc -- "ls -la /code; ls /code/.git; grep -c extraheader /code/.git/config; stat -c \"%U %n\" /code/.git/config /code/.venv/bin/python /code/default_srt_settings.json"
+Image: mcp-run-isolated-python-mcp-run-isolated-python:latest (local build from developer worktree; no .dockerignore in repo)
+Output (abridged):
+total  
+drwxr-xr-x root .
+drwxr-xr-x root ..
+-rw-r--r-- nonroot .DS_Store
+drwxr-xr-x nonroot .claude
+drwxr-xr-x nonroot .git
+drwxr-xr-x nonroot .github
+-rw-r--r-- nonroot .gitignore
+drwxr-xr-x nonroot .idea
+drwxr-xr-x nonroot .intelij
+drwxr-xr-x nonroot .jbeval
+-rw-r--r-- nonroot .pre-commit-config.yaml
+drwxr-xr-x nonroot .pytest_cache
+drwxr-xr-x nonroot .ruff_cache
+drwxr-xr-x nonroot .testing
+drwxr-xr-x nonroot .venv
+-rw-r--r-- nonroot CONTRIBUTING.md
+-rw-r--r-- nonroot Dockerfile
+-rw-r--r-- nonroot LICENCE
+-rw-r--r-- nonroot README.md
+-rw-r--r-- nonroot default_srt_settings.json
+drwxr-xr-x nonroot dist
+-rw-r--r-- nonroot docker-compose.yml
+-rw-r--r-- nonroot docker-entrypoint.sh
+-rw-r--r-- nonroot pyproject.toml
+-rwxr-xr-x nonroot setup_host.sh
+drwxr-xr-x nonroot src
+drwxr-xr-x nonroot tests
+-rw-r--r-- nonroot uv.lock
+--- .git entries:
+COMMIT_EDITMSG FETCH_HEAD HEAD ORIG_HEAD config description hooks index info logs objects packed-refs refs 
+--- extraheader count in /code/.git/config:
+0
+nonroot /code/.git/config
+nonroot /code/.venv/bin/python
+nonroot /code/default_srt_settings.json

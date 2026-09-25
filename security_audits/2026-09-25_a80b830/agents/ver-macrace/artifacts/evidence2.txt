@@ -1,0 +1,2 @@
+run result: success 'parent exiting normally' ''
+sandbox descendants alive after normal exit (Linux srt/bwrap): none

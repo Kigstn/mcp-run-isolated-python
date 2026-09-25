@@ -1,0 +1,27 @@
+Check: srt host-side temp artifacts leak into shared /tmp per run (CLAUDE_CODE_TMPDIR not honoured for them), incl. timed-out runs
+Command: python3 sbx.py h-cleanup --srt -- 'cd /scratch && python tmpleak.py'
+--- tmpleak.py ---
+import os
+from pathlib import Path
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+from mcp_run_isolated_python.code_executor import CodeExecutor
+wd = Path("/work/wd2"); wd.mkdir(exist_ok=True); os.chmod(wd, 0o755)
+ex = CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=3, user="nonroot",
+    path_to_srt_settings=Path("/code/default_srt_settings.json"), working_directory=wd,
+    path_to_python_interpreter=Path("/sandbox/.venv/bin/python")))
+def snap(): return set(os.listdir("/tmp"))
+base = snap()
+for i in range(2): ex.run_python_code("print(1)")
+print("after 2 normal runs, new /tmp entries:", sorted(snap() - base))
+base2 = snap()
+for i in range(3): r = ex.run_python_code("import time; time.sleep(60)"); print("timeout run:", r[0].status, (r[0].error or "")[-30:])
+print("after 3 timed-out runs, new /tmp entries:", sorted(snap() - base2))
+--- output ---
+after 2 normal runs, new /tmp entries: ['claude-empty-Kyg5L2', 'claude-empty-j5mAgn', 'claude-empty-mS6VtQ', 'claude-empty-pUzNFM', 'claude-http-7dacc9436a764bd2.sock', 'claude-http-a2465c1a9ce1aa05.sock']
+timeout run: failure Timed out after 3s
+timeout run: failure Timed out after 3s
+timeout run: failure Timed out after 3s
+after 3 timed-out runs, new /tmp entries: ['claude-empty-4v3t4H', 'claude-empty-diYJ8g', 'claude-empty-lKhwvN', 'claude-empty-n2wggT', 'claude-empty-p42qrO', 'claude-empty-tLmjpD', 'claude-http-61815c263de67519.sock', 'claude-http-7c99149ce5a5a1fd.sock', 'claude-http-c15b4febf0de0ee0.sock']
+--- srt source (image /usr/local/lib/node_modules/@anthropic-ai/sandbox-runtime/dist) ---
+linux-sandbox-utils.js:367/370 join(tmpdir(), claude-http-/claude-socks-<id>.sock); :714 mkdtempSync(join(tmpdir(),'claude-empty-')); mux-proxy.js:22 srt-mux-<pid>.sock -- node os.tmpdir() reads TMPDIR, not CLAUDE_CODE_TMPDIR
+--- fix check: srt run directly with env TMPDIR=/work/r CLAUDE_CODE_TMPDIR=/work/r as nonroot: /tmp entry count 111 before, 111 after; artifacts (claude-empty-*, srt-mux-*.sock) appeared in /work/r instead ---

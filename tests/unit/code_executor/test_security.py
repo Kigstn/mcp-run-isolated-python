@@ -1,5 +1,7 @@
+import os
 import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import textwrap
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -138,3 +140,35 @@ def test_total_output_size_is_bounded(code_executor: CodeExecutor, monkeypatch: 
     result, files = run(code_executor, "for i in range(4): open(f'output/f{i}.bin', 'wb').write(b'x' * 1000)")
     assert result.status == "success"
     assert len(files) == 2
+
+
+def test_deep_directory_tree_is_removed(tmp_path: Path) -> None:
+    # sandbox code controls the tree: deeper than PATH_MAX & the fd limit, with a locked leaf
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    fd = os.open(run_dir, os.O_RDONLY)
+    for _ in range(2100):
+        os.mkdir("d", dir_fd=fd)
+        new = os.open("d", os.O_RDONLY, dir_fd=fd)
+        os.close(fd)
+        fd = new
+    os.fchmod(fd, 0)
+    os.close(fd)
+
+    code_executor_module._remove_run_dir(run_dir)
+    assert not run_dir.exists()
+
+
+def test_run_waits_for_a_free_slot(code_executor: CodeExecutor, monkeypatch: pytest.MonkeyPatch) -> None:
+    slots = threading.Semaphore(0)
+    monkeypatch.setattr(code_executor_module, "_run_slots", slots)
+    results = []
+    waiting = threading.Thread(target=lambda: results.append(run(code_executor, "print(1)")))
+    waiting.start()
+    time.sleep(1)
+    assert results == []  # queued, not rejected
+
+    slots.release()
+    waiting.join(timeout=30)
+    assert results[0][0].status == "success"
+    assert results[0][0].output == "1"

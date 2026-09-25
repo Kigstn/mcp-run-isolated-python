@@ -1,0 +1,26 @@
+h-limits — memory dimension of no-per-run-resource-limits: a80b830 added ulimit -u (nproc) and ulimit -f (fsize) only;
+there is NO per-run memory bound (no ulimit -v / RLIMIT_AS, no per-run cgroup). Under a container memory cgroup this
+is self-limiting (the offending run is OOM-killed); without one (README `docker run` sets no --memory) it reaches host
+memory.
+
+Launcher: python3 sbx.py h-limits --srt -- 'cd /scratch && python v2.py'
+Fixture as evidence1 (container cgroup memory.max = 536870912 = 512m).
+
+Driver v2.py: one run allocates 50MB chunks (touching pages) in a loop with no bound; monitor server rss and a victim.
+
+OUTPUT:
+server pid 7 cgroup mem.max 536870912
+t=1s server rss=77MB mem.current=61362176
+ATTACKER RESULT ["status='failure' output='' error=None"]
+SERVER ALIVE AT END: True
+VICTIM RESULT ["status='success' output='victim ok' error=None"]
+
+Findings:
+(a) The run's unbounded allocation is contained by the CONTAINER cgroup: the cgroup OOM killer terminated the
+    allocating sandbox process tree (~within 1s), the root MCP server survived, and a subsequent victim run succeeded.
+(b) So the memory dimension is self-limiting ONLY because a container memory cgroup exists. The application applies no
+    per-run memory limit. The compose file sets mem_limit: 2g (shared container-wide, a deployment control, not per-run),
+    but the README-recommended `docker run` command sets no --memory at all -> a single run's allocation would reach
+    host memory and the host OOM killer, whose victim selection is not guaranteed to be the offender. That cross-run/host
+    impact is deployment-topology-dependent (needs owner validation), unlike the process-pool starvation in evidence1
+    which is deployment-independent.

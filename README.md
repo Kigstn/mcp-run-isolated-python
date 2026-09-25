@@ -22,6 +22,7 @@ This is mandatory - to my knowledge these are the miniumum needed permissions, b
 
 ```
 docker run -p 6400:6400 \
+  --pids-limit 512 --memory 2g --cpus 2 \
   --security-opt seccomp=unconfined \
   --security-opt apparmor=unconfined \
   --security-opt systempaths=unconfined \
@@ -46,6 +47,13 @@ To configure what packages are available to the LLM set `PYTHON_DEPENDENCIES` as
 
 ```
 docker run ... -e PYTHON_DEPENDENCIES="numpy pandas" kigstn/mcp-run-isolated-python
+```
+
+The server only accepts requests whose `Host` header is `localhost`, `127.0.0.1` or `::1` (this blocks DNS rebinding attacks from websites).
+If clients reach it under another name, e.g. the compose service name from another container, allow that name (comma separated list):
+
+```
+docker run ... -e MCP_ALLOWED_HOSTS="mcp-run-isolated-python,mcp.internal" kigstn/mcp-run-isolated-python
 ```
 
 Or bake your own image on top, which is better if you restart often, deploy offline, or want a pinned set:
@@ -124,6 +132,13 @@ To harden security, it is heavily recommended to use this server in an isolated 
 ### Open security concerns
 
 - Reading of file contents on host system - needs to be restricted on case by case basis using the srt settings
+
+### Security Review
+
+This repo has been audited used claude code with opus 5.5 using the [cloudflare security assessment skills](https://github.com/cloudflare/security-audit-skill).
+Results can be found in the `./security_audits` folder.
+
+The only issue found is missing authentication. This is up to the user to configure, MCP support this.
 
 ## Comparison to (some) other tools
 

@@ -1,0 +1,29 @@
+h-limits — cross-run process-pool starvation persists after a80b830 (fingerprint code_executor.py:_run_sandboxed/no-per-run-resource-limits)
+
+Launcher: python3 sbx.py h-limits --srt -- 'mkdir -p /scratch/wd3 && cd /scratch && python v3.py'
+Fixture: docker --network none, read-only rootfs, cap-drop ALL + SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER/KILL,
+seccomp/apparmor unconfined, memory 512m, pids-limit 128, cpus 1, fsize 10MiB. Real srt 0.0.64 + bwrap,
+server=root(uid0)=MCP identity, code=nonroot(uid999), /code/default_srt_settings.json, /sandbox/.venv/bin/python.
+Post-a80b830 source in effect: cmd = 'ulimit -u 256; ulimit -f 97656; exec unshare --ipc --user --map-current-user "<py>" "<code.py>"'.
+
+Driver v3.py: one CodeExecutor(user=nonroot, code_timeout_seconds=20). Thread A runs an attacker program that
+os.fork()s uid-999 children until the shared process pool is exhausted and holds them ~14s. 4s later the SAME
+executor runs a concurrent victim run: print("victim ok"). After A exits, a third run: print("recovered").
+
+OUTPUT:
+VICTIM DURING ATTACK: ["status='failure' output='Tool run failed. Do not call this tool again, inform the user that it is broken.' error='Traceback (most recent call last):\n  File \"/target/src/mcp_run_isolated_python/code_e..."]
+ATTACKER: ["status='success' output='attacker forked 102 then [Errno 11] Resource temporarily unavailable' error=None"]
+VICTIM AFTER ATTACK: ["status='success' output='recovered' error=None"]
+
+Findings:
+(a) All sandboxed runs execute as one uid (999 in Docker). The a80b830 fix added `ulimit -u 256`, but RLIMIT_NPROC is
+    counted per real uid, so the 256 cap is a POOL SHARED by every concurrent run of that uid — it is NOT per-run
+    isolation. The container pids-limit (128 here) is likewise a shared, deployment-level pool.
+(b) One run consuming the shared process pool denies a concurrent, unrelated run: the server's own subprocess.Popen for
+    the victim fails with EAGAIN, is caught by the broad except in run_python_code, and the client receives
+    "Tool run failed. Do not call this tool again, inform the user that it is broken." The MCP server (uid 0) itself
+    stays up but the tool is unavailable to the victim client for the duration of the attack.
+(c) Recovers automatically once the offending run exits or times out (<= code_timeout_seconds, default 30s), but the
+    attacker can resubmit continuously to sustain the outage. This is deployment-independent: it depends only on the
+    shared uid + absence of any per-run resource partition in application code (Popen has no preexec_fn/setrlimit and no
+    per-run cgroup; code_executor.py:_run_sandboxed).

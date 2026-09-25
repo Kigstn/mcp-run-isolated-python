@@ -1,0 +1,16 @@
+Check: CLI --mcp_transport=stdio end-to-end (sbx.py h-stdio --srt; Docker-mode settings: user=nonroot, /code/default_srt_settings.json, /sandbox/.venv/bin/python, working_directory=/scratch/wd)
+Command: cd /code && python /scratch/client.py   (mcp stdio_client spawning: python -m mcp_run_isolated_python.cli --mcp_transport=stdio --path_to_python=/sandbox/.venv/bin/python --user=nonroot --path_to_srt_settings=/code/default_srt_settings.json --working_directory=/scratch/wd)
+Client result: s.initialize() -> mcp.shared.exceptions.MCPError: Connection closed
+Server stderr (last lines):
+    ...<6 lines>...
+    )
+  File "/code/.venv/lib/python3.13/site-packages/fastmcp/server/mixins/transport.py", line 95, in run_async
+    await self.run_stdio_async(
+          ~~~~~~~~~~~~~~~~~~~~^
+        show_banner=show_banner,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+        **transport_kwargs,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: TransportMixin.run_stdio_async() got an unexpected keyword argument 'host'

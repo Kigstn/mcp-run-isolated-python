@@ -1,0 +1,20 @@
+Command: python3 sbx.py h-misc --srt -- 'python /scratch/t1.py' (CodeExecutor user=nonroot, /code/default_srt_settings.json [weaker nested], /sandbox/.venv/bin/python, working_directory=/scratch/wd) — Docker-deployment reproduction.
+Sandboxed code attempted writes and printed ANSI + newline-forged log text:
+  print("\x1b[31mRED\x1b[0m\nFAKE [info     ] forged log line")
+--- sandbox result (from returned CodeExecutionResult) ---
+WRITE FAIL /code/.venv/pwn OSError
+WRITE FAIL /sandbox/.venv/pwn OSError
+WRITE FAIL /code/pwn OSError
+WRITE FAIL /tmp/pwn OSError
+WRITE FAIL /scratch/pwn OSError
+WRITE OK /dev/shm/pwn        (peer-owned srt /dev/shm allowance, not reported here)
+WRITE FAIL /var/tmp/pwn OSError
+WRITE FAIL /home/nonroot/pwn OSError
+uid 999
+CapPrm/CapEff 0000000000000000 (after unshare --user + exec python)
+Host check after run: ls /code/.venv/pwn /sandbox/.venv/pwn -> No such file or directory
+Image ownership (stat): root 755 /code ; nonroot 755 /code/.venv ; nonroot 755 /sandbox ; nonroot 644 /code/default_srt_settings.json
+--- server log line (cat -v), structlog ConsoleRenderer ---
+... Command executed ... result={'status': 'success', 'output': "...\x1b[31mRED\x1b[0m\nFAKE [info     ] forged log line", ...}
+... Running python code ... code='\nimport os, glob\n...print("\\x1b[31mRED\\x1b[0m\\nFAKE ...")\n'
+=> str/dict values are repr()-rendered: raw ESC bytes and newlines from code/output never reach the log stream (no log forging / terminal escape injection).

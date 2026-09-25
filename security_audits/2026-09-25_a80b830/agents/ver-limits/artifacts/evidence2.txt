@@ -1,0 +1,12 @@
+ver-limits evidence2 - cross-run starvation via the shared container pid pool (per-run cap x concurrent runs > pool)
+Launcher: python3 sbx.py ver-limits --srt -- 'cd /scratch && NP=60 python t2.py'  (fixture pids-limit 128)
+Scaling: per-run cap 60 against a 128-pid pool models the shipped values 256 per run against compose pids_limit 512
+(2 x 256 >= 512). Two concurrent attacker runs (fork loops) + a victim run 4.5s later + a retry afterwards, same executor.
+OUTPUT:
+ATTACKER:  success  attacker forked 57 then [Errno 11]   (its own per-run cap)
+ATTACKER2: success  attacker forked 21 then [Errno 11]   (container pid cgroup exhausted)
+VICTIM DURING ATTACK: failure  'Tool run failed. Do not call this tool again, inform the user that it is broken.'
+   error: BlockingIOError: [Errno 11] Resource temporarily unavailable, raised in the server's own subprocess.Popen (_execute_child)
+AFTER: success  recovered
+Conclusion: each run is capped, but nothing bounds how many runs execute concurrently, so the per-run caps sum past the
+shared container pid pool. Two unauthenticated requests deny a concurrent client's run. It recovers once the attacker runs end.

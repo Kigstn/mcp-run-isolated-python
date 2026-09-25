@@ -1,0 +1,29 @@
+# ver-outagg independent reproduction of no-aggregate-output-file-bound (residual after a80b830)
+# launcher: python3 sbx.py ver-outagg --srt -- 'cd /scratch && python v.py 8'
+# real srt+bwrap, server=root, code user=nonroot, /code/default_srt_settings.json,
+# code_timeout_seconds=8, working_directory=/scratch/wd
+# limits: --network none, read-only rootfs, 512m mem, 128 pids, 1 cpu, fsize 10MiB, nofile 512, 120s wall
+# sandboxed payload (runs until the 8s code timeout kills it):
+#   i=0
+#   while True:
+#       open(f'output/{i:0200d}.txt','wb').close(); i+=1
+# harness wraps CodeExecutor._collect_output_files to time it and read /proc/self/statm RSS growth
+# incl. model_dump_json of each returned item.
+
+# result:
+code_timeout_seconds: 8 | tool call wall s: 21.4
+status: failure | err tail: Timed out after 8s
+returned items (incl result): 9599 | stats: {'entries_on_disk': 9598, 'collect_s': 9.82,
+  'items': 9598, 'json_bytes': 3176938, 'rss_growth': 14426112}
+run dir left after cleanup: []
+
+# Interpretation:
+# - 9598 zero-byte files created within the 8s code timeout; ALL returned as content items.
+# - _collect_output_files ran 9.82s AFTER the code timeout (tool call total 21.4s vs 8s advertised timeout),
+#   i.e. the shared server worker thread is held well past the code timeout with no deadline.
+# - 3,176,938 JSON bytes and +14,426,112 RSS produced, while the 200MB byte budget
+#   (MAX_TOTAL_OUTPUT_FILE_BYTES) counted 0 bytes because total += len(data) and every file is 0 bytes.
+# - No entry-count cap, no serialized-size cap, no time bound on collection. Cost scales with fs
+#   file-creation speed within code_timeout and multiplies across concurrent requests.
+# Consistent with h-output evidence1 (faster fs): 40,940 files, collect 21.14s post-timeout,
+#   13,551,140 JSON bytes, +55,717,888 RSS, 0 bytes charged.

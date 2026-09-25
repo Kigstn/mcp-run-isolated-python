@@ -1,0 +1,49 @@
+Check (ver-logesc): sandbox-/client-controlled str log fields reach server stdout with raw control bytes
+Command: sbx.py ver-logesc --srt -- 'cd /code && python /scratch/v.py > /scratch/v_stdout.bin'
+Installed structlog 26.1.0; dev.py:915-928 ConsoleRenderer._repr quotes a str only if it contains space/tab/=/CR/LF/quote; logger.py:24 does not set repr_native_str (dirty diff in logger.py is a blank-line-only change).
+--- v.py ---
+from mcp_run_isolated_python.direct_use import CodeSandbox
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+import os
+os.makedirs("/scratch/wdv", exist_ok=True)
+cs = CodeSandbox(settings=CodeSandboxSettings(user="nonroot", path_to_srt_settings="/code/default_srt_settings.json",
+    path_to_python_interpreter="/sandbox/.venv/bin/python", working_directory="/scratch/wdv", code_timeout_seconds=20))
+# 1) sandbox-chosen dir name: cursor-up + erase-line + OSC0 title (no space/tab/=/CR/LF/quote)
+CODE1 = "import os\nos.mkdir('output/'+'\\x1b[1A\\x1b[2KVERLOGESC\\x1b]0;VTITLE\\x07')\nos.symlink('/etc/passwd','output/'+'\\x1bcSYM')\n"
+with cs as sb:
+    sb.eval(CODE1)
+    # 2) client-chosen code string with no whitespace/quotes: comment carrying raw ESC/BEL
+    CODE2 = "#\x1b]0;CODETITLE\x07"
+    sb.eval(CODE2)
+--- server stdout lines (od -c) ---
+0000000  033   [   2   m   2   0   2   6   -   0   9   -   2   5   T   1
+0000020    2   :   0   2   :   5   5   .   5   5   1   7   3   4   Z 033
+0000040    [   0   m       [ 033   [   3   3   m 033   [   1   m   w   a
+0000060    r   n   i   n   g         033   [   0   m   ]     033   [   1
+0000100    m   S   k   i   p   p   i   n   g       o   u   t   p   u   t
+0000120        e   n   t   r   y       t   h   a   t       c   a   n   '
+0000140    t       b   e       o   p   e   n   e   d       (   e   .   g
+0000160    .       s   y   m   l   i   n   k   )             033   [   0
+0000200    m     033   [   3   6   m   n   a   m   e 033   [   0   m   =
+0000220  033   [   3   5   m 033   c   S   Y   M 033   [   0   m     033
+0000240    [   3   6   m   s   p   a   n 033   [   0   m   = 033   [   3
+0000260    5   m   N   o   n   e 033   [   0   m  \n 033   [   2   m   2
+0000300    0   2   6   -   0   9   -   2   5   T   1   2   :   0   2   :
+0000320    5   5   .   5   5   2   2   0   6   Z 033   [   0   m       [
+0000340  033   [   3   3   m 033   [   1   m   w   a   r   n   i   n   g
+0000360          033   [   0   m   ]     033   [   1   m   S   k   i   p
+0000400    p   i   n   g       o   u   t   p   u   t       e   n   t   r
+0000420    y       t   h   a   t       i   s       n   o   t       a    
+0000440    r   e   g   u   l   a   r       f   i   l   e                
+0000460                                  033   [   0   m     033   [   3
+0000500    6   m   n   a   m   e 033   [   0   m   = 033   [   3   5   m
+0000520  033   [   1   A 033   [   2   K   V   E   R   L   O   G   E   S
+0000540    C 033   ]   0   ;   V   T   I   T   L   E  \a 033   [   0   m
+0000560      033   [   3   6   m   s   p   a   n 033   [   0   m   = 033
+0000600    [   3   5   m   N   o   n   e 033   [   0   m  \n            
+0000615
+--- Result ---
+symlink entry named ESC c (RIS, full terminal reset) -> raw 033 c at name= (code_executor.py:192)
+directory entry ESC[1A ESC[2K VERLOGESC ESC]0;VTITLE BEL -> raw at name= (code_executor.py:197)
+code string '#ESC]0;CODETITLE BEL' -> raw at code= (code_executor.py:240)
+code string containing spaces/newlines -> repr-quoted (explains h-misc u6 negative result)

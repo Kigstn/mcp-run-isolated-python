@@ -1,0 +1,47 @@
+# h-output evidence1: zero-byte output entries bypass MAX_TOTAL_OUTPUT_FILE_BYTES; collection runs after code timeout
+# launcher: python3 sbx.py h-output --srt -- 'cd /scratch && python /scratch/h2.py 200000'  (real srt+bwrap, server=root, code user=nonroot, /code/default_srt_settings.json, code_timeout_seconds=30, working_directory=/scratch/wd)
+# limits: --network none, read-only rootfs, 512m mem, 128 pids, 1 cpu, fsize 10MiB, nofile 512, 120s wall
+# harness (h2.py) wraps CodeExecutor._collect_output_files to time it and measure /proc/self/statm RSS growth incl. model_dump_json of each item
+# sandboxed payload:
+for i in range(200000): open(f"output/{i:0200d}.txt","wb").close()
+# result:
+sandbox stdout:  | status: failure | err: Timed out after 30s
+returned items: 40941 stats: {'collect_s': 21.14, 'items': 40940, 'json_bytes': 13551140, 'rss_growth_bytes_after_collect_and_dump': 55717888}
+maxrss_kb: 138796
+run dir left: []
+
+# harness source:
+import os, sys, time, json, resource, tracemalloc, pathlib
+from mcp_run_isolated_python.code_executor import CodeExecutor
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+N = int(sys.argv[1])
+wd = pathlib.Path("/scratch/wd"); wd.mkdir(exist_ok=True); os.chmod(wd, 0o755)
+ex = CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=30, user="nonroot",
+     path_to_srt_settings=pathlib.Path("/code/default_srt_settings.json"), working_directory=wd,
+     path_to_python_interpreter=pathlib.Path("/sandbox/.venv/bin/python")))
+code = f"""
+import os, time
+t=time.time()
+for i in range({N}):
+    open(f"output/{{i:0200d}}.txt","wb").close()
+print("created", {N}, "empty files in", round(time.time()-t,2), "s")
+"""
+import mcp_run_isolated_python.code_executor as ce
+orig = ce.CodeExecutor._collect_output_files
+stats = {}
+def wrapped(p):
+    rss0=int(open('/proc/self/statm').read().split()[1])*4096
+    t = time.time()
+    r = orig(p)
+    stats["collect_s"] = round(time.time()-t, 2)
+    s = json.dumps([x.model_dump(mode="json") for x in r[:0]] )
+    js = sum(len(x.model_dump_json()) for x in r)
+    stats["items"] = len(r); stats["json_bytes"] = js
+    stats["rss_growth_bytes_after_collect_and_dump"] = int(open("/proc/self/statm").read().split()[1])*4096-rss0
+    return r
+ce.CodeExecutor._collect_output_files = staticmethod(wrapped)
+res = ex.run_python_code(code)
+print("sandbox stdout:", res[0].output, "| status:", res[0].status, "| err:", (res[0].error or "")[:300])
+print("returned items:", len(res), "stats:", stats)
+print("maxrss_kb:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+print("run dir left:", os.listdir(wd))

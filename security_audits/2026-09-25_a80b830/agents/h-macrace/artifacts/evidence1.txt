@@ -1,0 +1,24 @@
+Property check: the chmod in _remove_run_dir's cleanup walk (code_executor.py:63 and :67,
+`sub.chmod(stat.S_IRWXU)` / `path.chmod(...)`, both pathlib.Path.chmod) FOLLOWS symlinks.
+
+Command (in parent sandbox, --network none, read-only rootfs, writes only /scratch):
+  python3 sbx.py h-macrace -- 'python3 /scratch/chmod_follow.py'
+
+Script (dummy dirs only, all under /scratch):
+  target = /scratch/cf/real_dir  (chmod 0o555)
+  link   = /scratch/cf/link -> real_dir  (symlink)
+  Path(link).chmod(stat.S_IRWXU)     # same call the walk makes after is_symlink()==False
+
+Output:
+  real_dir mode before: 0o555
+  real_dir mode after : 0o700
+  symlink itself is_symlink: True
+  RESULT: Path.chmod FOLLOWS the symlink and altered the link target's mode
+
+Conclusion: pathlib.Path.chmod uses os.chmod (follow_symlinks defaults to True; there is no
+follow_symlinks=False passed at code_executor.py:63/67). If a directory entry that passed the
+is_symlink()==False guard on line 66 is replaced by a symlink before line 67 runs (a classic
+check-then-use / TOCTOU window), the server's chmod resolves the symlink and applies mode 0700
+to the link's target -- an arbitrary same-uid directory outside the run directory. The server
+process performs this chmod OUTSIDE the srt/Seatbelt sandbox, so it is not subject to the
+sandbox's write-scope confinement.

@@ -1,0 +1,21 @@
+h-gid local check (parent sandbox launcher, --srt mode = real srt+bwrap as in Docker deployment; server=root, CodeSandboxSettings(user="nonroot", path_to_srt_settings=/code/default_srt_settings.json, path_to_python_interpreter=/sandbox/.venv/bin/python, working_directory=/scratch/wd))
+Command: python3 sbx.py h-gid --srt -- 'python /scratch/h.py'   (h.py builds CodeExecutor and calls run_python_code(inner.py))
+Limits: --network none, read-only rootfs, 512m mem, 128 pids, 1 cpu, fsize 10MiB, nofile 512, 120s wall.
+
+Run 1 (dummy root:root files created by root harness: /scratch/dummy_g640 mode 0640 content DUMMY-GROUP-SECRET, /scratch/dummy_g660 mode 0660):
+server: 0 0 [0]
+cmd executed: ulimit -u 256; ulimit -f 97656; exec unshare --ipc --user --map-current-user "/sandbox/.venv/bin/python" ".../code.py"
+sandbox uid/gid/egid/groups: 999 0 0 [0]
+/proc/self/status: Uid 999 999 999 999 | Gid 0 0 0 0 | Groups: 0
+read /scratch/dummy_g640 -> DUMMY-GROUP-SECRET      (group-0 read of a root:root 0640 dummy outside srt denyRead works)
+write /scratch/dummy_g660 -> OSError                 (srt read-only bind blocks writes outside run dir)
+walk of / (excluding /proc,/sys,/dev,/tmp,/scratch) for gid-0 entries with group access but no other access, not owned by sandbox uid: 8
+  0o40775 root:0 /usr/share/man/man{1,5,7,8}; 0o40775 /var/cache/debconf/tmp.ci  (dirs; writes blocked by srt ro mount)
+  0o100640 root:0 /var/lib/dpkg/lock, /var/lib/dpkg/lock-frontend, /var/cache/apt/archives/lock (empty lock files)
+/dev: no gid-0 group-only device nodes
+
+Run 2 (/proc depth<=3 excl. task,/proc/sys; /tmp; /dev/shm; /run; /dev/mqueue):
+ids: 999 0 [0]
+only gid-0 group-only entries: /proc/<pid>/net/ip{,6}_tables_{names,matches,targets} (0440, netfilter table/match names, readable)
+after filtering those: 0 entries
+(root uid appears as 65534 inside the unshare user namespace; gid 0 is mapped via --map-current-user)

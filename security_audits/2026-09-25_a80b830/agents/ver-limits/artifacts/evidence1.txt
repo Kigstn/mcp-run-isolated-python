@@ -1,0 +1,12 @@
+ver-limits evidence1 - is `ulimit -u` a per-uid pool shared across runs? (post-a80b830 source, real srt 0.0.64 + bwrap)
+Launcher: python3 sbx.py ver-limits --srt -- 'cd /scratch && python t1.py'  (kernel 6.8.0-64-generic; fixture pids-limit 128, mem 512m)
+Driver: one CodeExecutor(user=nonroot, code_timeout_seconds=25); ce.MAX_SANDBOX_PROCESSES set to 30 so the per-run cap sits
+below the fixture's 128-pid cgroup (same code path; cmd = 'ulimit -u 30; ulimit -f 97656; exec unshare --ipc --user --map-current-user py code.py').
+Run A (thread): fork loop holding children 12s. Run B (5s later, concurrent, same uid 999): fork 10 children.
+OUTPUT:
+VICTIM DURING ATTACK: success  victim uid 999 ['Max processes 30 30 processes']  victim forked 10
+ATTACKER: success  attacker forked 27 then [Errno 11] Resource temporarily unavailable
+Conclusion: the attacker was stopped by ITS OWN 30-process cap while a concurrent run of the same uid 999 still forked 10
+children. Because each run gets a new user namespace (unshare --user) after `ulimit -u`, kernel >=5.14 ucounts charge
+RLIMIT_NPROC per user namespace, so on Linux the cap acts as a per-run budget, not one pool shared by uid 999.
+The hunter's run (attacker forked 102 < 256) hit the fixture's 128-pid container cgroup, not the 256 ulimit.

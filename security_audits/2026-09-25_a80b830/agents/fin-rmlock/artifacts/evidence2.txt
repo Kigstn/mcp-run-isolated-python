@@ -1,0 +1,13 @@
+uid 0 3.13.15
+fix2 300  left: False
+fix2 300 lock left: False
+2026-09-25T12:12:28.934868Z [error    ] Could not fully remove run directory                         path=/dev/shm/r900F
+fix2 900  left: False
+2026-09-25T12:12:29.129603Z [error    ] Could not fully remove run directory                         path=/dev/shm/r900T
+fix2 900 lock left: False
+  fix2: cleanup raised OSError 36
+fix2 2100  left: False
+  fix2: cleanup raised OSError 36
+fix2 2100 lock left: False
+outside mode 0o40500 exists True
+chmod (GNU coreutils) 9.7

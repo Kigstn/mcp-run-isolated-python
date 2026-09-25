@@ -1,0 +1,11 @@
+h-srtpaths local check: srt honours _write_srt_settings denyWrite over its implicit write paths (Docker mode reproduction)
+Command: python3 sbx.py h-srtpaths --srt -- 'cd /scratch && python t2.py'  (same limits/env as evidence1; srt 0.0.64,
+  user=nonroot, /code/default_srt_settings.json, working_directory=/scratch/wd2, /sandbox/.venv/bin/python)
+Sandboxed code: for each dir, os.makedirs(d, exist_ok=True); open(d+"/probe.txt","w")
+Output:
+/tmp/claude DENIED OSError
+/home/nonroot/.npm/_logs DENIED OSError
+/home/nonroot/.claude/debug DENIED OSError
+/tmp DENIED OSError
+/home/nonroot DENIED OSError
+/dev/shm WRITE OK      (srt default /dev allowance; owned by peer unit on srt default write/IPC allowances, not assessed here)

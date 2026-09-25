@@ -1,0 +1,19 @@
+h-srtpaths local check: cross-run read/write isolation under _write_srt_settings (Docker mode reproduction)
+Command (parent launcher): python3 sbx.py h-srtpaths --srt -- 'cd /scratch && python t1.py'
+Limits: --network none, read-only rootfs, 512m, 128 pids, 1 cpu, fsize 10MiB, 120s; env PATH/HOME=/tmp/PYTHONPATH=/target/src only.
+Setup: CodeExecutor(CodeSandboxSettings(user="nonroot", path_to_srt_settings=/code/default_srt_settings.json (enableWeakerNestedSandbox=true),
+       working_directory=/scratch/wd, path_to_python_interpreter=/sandbox/.venv/bin/python, code_timeout_seconds=40)); srt 0.0.64.
+Generated srt filesystem settings:
+  {'denyRead': ['/scratch/wd'], 'allowWrite': ['.'], 'denyWrite': ['/tmp/claude', '/private/tmp/claude', '/home/nonroot/.npm/_logs', '/home/nonroot/.claude/debug'], 'allowRead': ['.']}
+Run B (started first, sleeps 12s): writes output/secretB.txt = "DUMMY-B-SECRET"; cwd /scratch/wd/0ae4823b4915436d9f41ddb2ee3d8064
+Run A (concurrent) results:
+  cwd => /scratch/wd/6c33b462ec6f4acc8c7204edeadcfcf7
+  own_code_readable => True           (allowRead "." re-allows own run dir)
+  list_workdir => ['6c33b462ec6f4acc8c7204edeadcfcf7']   (sibling run B not visible: denyRead tmpfs over working dir)
+  write_own_output => 1
+  write_workdir => 1                  (write lands in the denyRead tmpfs; not visible on host / to other runs)
+  /proc/<B python pid 68>/cwd  => ERR PermissionError ; /proc/68/root => ERR PermissionError  (separate user namespace from unshare --user)
+  /proc/<A's own pid>/cwd listing works (sanity)
+Run B after A finished: output = ['secretB.txt'] (A did not modify it)
+Side observation (peer-owned, not a finding here): container /proc is visible (other runs' cmdlines incl. run-dir uuid; server pid cmdline),
+  and /tmp lists other runs' claude-http-*.sock proxy sockets.

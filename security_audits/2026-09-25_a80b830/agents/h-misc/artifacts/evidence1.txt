@@ -1,0 +1,23 @@
+Command: python3 sbx.py h-misc --srt -- 'python /scratch/t4.py' (CodeExecutor user=nonroot, /code/default_srt_settings.json [enableWeakerNestedSandbox=true], /sandbox/.venv/bin/python, working_directory=/scratch/wd). Local fixture: TCP listener on 0.0.0.0:6400 in the container netns (stand-in for the MCP server port); it prints FIXTURE GOT CONNECTION on any accept (never printed). Proxy credential redacted.
+Sandboxed code: urllib to 127.0.0.1:6400/localhost:6400/169.254.169.254/example.com; raw HTTP CONNECT+GET via localhost:3128 with the per-run proxy credential; SOCKS5 via localhost:1080 with credential to 127.0.0.1:6400; direct TCP connect; AF_UNIX socket; bind.
+--- output ---
+RESULT: proxy http://srt:<redacted>@localhost:3128 http://srt:<redacted>@localhost:3128
+URL http://127.0.0.1:6400/ URLError <urlopen error [Errno 111] Connection refused>
+URL http://localhost:6400/ URLError <urlopen error [Errno 111] Connection refused>
+URL http://169.254.169.254/latest/meta-data/ HTTPError HTTP Error 403: Forbidden
+URL http://example.com/ HTTPError HTTP Error 403: Forbidden
+PROXY CONNECT 127.0.0.1:6400 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+PROXY GET 127.0.0.1:6400 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+PROXY CONNECT localhost:6400 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+PROXY GET localhost:6400 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+PROXY CONNECT 169.254.169.254:80 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+PROXY GET 169.254.169.254:80 b'HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nX-Proxy-Er'
+ALL_PROXY http://srt:<redacted>@localhost:3128 socks port env 35381
+SOCKS 1080 method b'\x05\x02'
+SOCKS auth b'\x01\x00'
+SOCKS 1080 connect 127.0.0.1:6400 reply b'\x05\x02'
+SOCKS 35381 ConnectionRefusedError [Errno 111] Connection refused
+DIRECT 127.0.0.1 ConnectionRefusedError [Errno 111] Connection refused
+AF_UNIX PermissionError [Errno 1] Operation not permitted
+bind ok 
+ERR: 

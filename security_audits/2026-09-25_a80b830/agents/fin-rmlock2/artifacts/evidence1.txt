@@ -1,0 +1,9 @@
+uid 0 3.13.15
+300 lock True left: False
+900 lock True left: False
+2100 lock True left: False
+2100 lock False left: False
+outside mode 0o40500
+CapEff:	0000000000000000
+chmod (GNU coreutils) 9.7
+outside

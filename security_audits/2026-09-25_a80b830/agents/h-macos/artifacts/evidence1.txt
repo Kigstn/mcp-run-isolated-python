@@ -1,0 +1,80 @@
+# h-macos evidence1: executor-side lifecycle of sandbox descendants (macOS command shape, STUB srt)
+# Launcher: python3 run-3/sbx.py h-macos -- 'export PATH=/scratch/bin:$PATH; cd /scratch; python3 t.py'
+# Limits: --network none, ro rootfs, cap-drop ALL, 512m, 128 pids, 1 cpu, fsize 10MiB, nofile 512, 120s; env PATH HOME=/tmp PYTHONPATH=/target/src
+# NOTE: /scratch/bin/srt is a STUB reproducing srt 0.0.64 macOS cli.js lifecycle (spawn child, exit with its code, no descendant cleanup);
+#       it applies NO Seatbelt policy. sys.platform patched to 'darwin' so code_executor.py:245-249 builds the macOS cmd (no unshare).
+## stub srt
+#!/bin/sh
+# STUB mimicking srt 0.0.64 macOS CLI lifecycle (cli.js: spawn sandbox-exec ... sh -c CMD; exit with child's code;
+# no descendant cleanup). No Seatbelt confinement here. argv: --settings FILE -c CMD
+sh -c "$4"
+exit $?
+## harness t.py
+import os, threading, time
+from pathlib import Path
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+from mcp_run_isolated_python.code_executor import CodeExecutor
+import sys; sys.platform = "darwin"  # build the macOS command (no unshare prefix), as code_executor.py:245-249 does on darwin
+
+def sleepers(tag):
+    out = []
+    for p in os.listdir("/proc"):
+        if p.isdigit():
+            try:
+                c = open(f"/proc/{p}/cmdline","rb").read().split(b"\0")
+            except OSError:
+                continue
+            if c[:2] == [b"sleep", tag.encode()]:
+                st = open(f"/proc/{p}/stat").read().split()
+                out.append((int(p), "state="+st[2], "pgid="+st[4], "sid="+st[5]))
+    return out
+
+def nfds(): return len(os.listdir("/proc/self/fd"))
+
+def mk(t): return CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=t, user=None,
+    path_to_srt_settings=Path("/target/default_srt_settings.json"), working_directory=Path("/scratch/wd"),
+    path_to_python_interpreter=Path(__import__("sys").executable)))
+
+CHILD = '''
+import os, time
+if os.fork() == 0:
+    {setsid}
+    os.execv("/bin/sleep", ["sleep", "{tag}"])
+{parent}
+print("parent exiting")
+'''
+print("baseline threads", threading.active_count(), "fds", nfds())
+# A: normal exit, background child, no setsid
+ex = mk(10)
+t0=time.time(); r = ex.run_python_code(CHILD.format(setsid="", tag="41", parent="pass"))
+print("A returned after %.1fs status=%s out=%r" % (time.time()-t0, r[0].status, r[0].output))
+time.sleep(0.5)
+print("A survivors after run returned:", sleepers("41"), "threads", threading.active_count(), "fds", nfds())
+print("A run dir entries left:", os.listdir("/scratch/wd"))
+# B: timeout, child calls setsid, parent hangs
+ex = mk(2)
+t0=time.time(); r = ex.run_python_code(CHILD.format(setsid="os.setsid()", tag="42", parent="time.sleep(100)"))
+print("B returned after %.1fs status=%s err=%r" % (time.time()-t0, r[0].status, r[0].error))
+time.sleep(0.5)
+print("B survivors after timeout+killpg:", sleepers("42"), "threads", threading.active_count(), "fds", nfds())
+# C: control - timeout, no setsid: killpg should reach it
+ex = mk(2)
+r = ex.run_python_code(CHILD.format(setsid="", tag="43", parent="time.sleep(100)"))
+time.sleep(0.5)
+print("C (control, no setsid) survivors after timeout:", sleepers("43"))
+print("server pid", os.getpid(), "pgid", os.getpgid(0))
+## observed output (log lines filtered)
+baseline threads 1 fds 4
+A returned after 10.3s status=success out=''
+A survivors after run returned: [(15, 'state=S', 'pgid=11', 'sid=11')] threads 3 fds 6
+A run dir entries left: []
+B returned after 12.2s status=failure err='Timed out after 2s'
+B survivors after timeout+killpg: [(22, 'state=S', 'pgid=22', 'sid=22')] threads 5 fds 8
+C (control, no setsid) survivors after timeout: []
+server pid 7 pgid 1
+## interpretation
+A: normal exit -> no kill at all; background child alive after run_python_code returned; 2 reader threads + 2 pipe fds retained in server; call delayed 2x5s join; stdout of the run lost ('' although parent printed).
+B: timeout -> os.killpg(proc.pid) misses a child that called setsid(); it survives; again 2 threads + 2 fds retained.
+C: control -> killpg does reach a descendant that stays in the group.
+## host read-only facts (macOS dev host): ps -U uid | wc -l = 433; launchctl limit maxfiles soft = 256
+## srt 0.0.64 macos-sandbox-utils.js:284-287 '(allow process-exec)' '(allow process-fork)' '(allow signal (target same-sandbox))'; cli.js:202-230 spawn child, on 'exit' process.exit(code) - no descendant/pgroup cleanup

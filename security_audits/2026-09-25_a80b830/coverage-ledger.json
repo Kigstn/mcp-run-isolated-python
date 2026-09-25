@@ -1,0 +1,2431 @@
+[
+ {
+  "coverage_id": ".%23repository%20contents::.%23secrets%20and%20basic%20exposure::.::ATTACK-CLASSES.md%23Obvious%20things",
+  "canonical_refs": {
+   "surface": ".#repository contents",
+   "boundary": ".#secrets and basic exposure",
+   "subsystem": ".",
+   "attack_class": "ATTACK-CLASSES.md#Obvious things"
+  },
+  "surface": ".#repository contents",
+  "boundary": ".#secrets and basic exposure",
+  "subsystem": ".",
+  "attack_class": "ATTACK-CLASSES.md#Obvious things",
+  "starting_paths": [
+   ".gitignore",
+   "pyproject.toml",
+   "uv.lock",
+   "src/mcp_run_isolated_python",
+   ".github",
+   "README.md",
+   "Dockerfile",
+   "docker-compose.yml"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Obvious things",
+  "selected_companion_blocks": [],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u11",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-samesrc",
+  "reviewed_paths": [
+   ".github/workflows/publish.yml",
+   ".gitignore",
+   "Dockerfile",
+   "README.md",
+   "default_srt_settings.json",
+   "docker-compose.yml",
+   "pyproject.toml",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/settings.py",
+   "tests/unit/code_executor/test_security.py",
+   "uv.lock"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     ".gitignore",
+     ".github/workflows/publish.yml",
+     "tests/unit/code_executor/test_security.py",
+     "pyproject.toml",
+     "uv.lock",
+     "README.md",
+     "docker-compose.yml",
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/utils/settings.py"
+    ],
+    "invariant": "No hardcoded credentials, keys, or security TODO/FIXME comments in tracked files",
+    "method": "source",
+    "result": "Grepped tracked files (excluding uv.lock) for password, secret, api key, token, bearer, private-key headers and TODO/FIXME/HACK/XXX. The only hits are the GitHub secrets references in publish.yml, the id-token permission, and dummy 'server-only'/'SECRET' fixtures in test_security.py. No .env, *.pem, *.key or credentials files are tracked. .gitignore covers .env, .venv, dist and *.db.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/mcp_server.py",
+     "src/mcp_run_isolated_python/cli.py"
+    ],
+    "invariant": "No debug, admin or extra HTTP endpoints, cookies, CORS or redirect parameters beyond the one MCP tool",
+    "method": "source",
+    "result": "The server registers only the run_python_code tool on the FastMCP HTTP transport. It sets no custom routes, cookies, CORS headers or redirect parameters. Plain-HTTP transport without auth is the carried excluded finding and is not re-reported. Traceback returned to the client and code logging belong to a peer unit. The exec sink (running user code) is the product's purpose.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     "Dockerfile"
+    ],
+    "invariant": "Docker build context must not put secrets or developer artifacts into the image",
+    "method": "local",
+    "result": "The repo has no .dockerignore, and the Dockerfile runs `COPY . .` and then `COPY --from=builder --chown=nonroot:nonroot /code /code`. The locally built image contains /code/.git (full history, config with no extraheader credential), .claude, .idea, .jbeval, .testing, .pytest_cache, .DS_Store and dist, all owned by nonroot. No credential was shown to be exposed. CI builds from a clean checkout of a public repo, and actions/checkout@v6 keeps persisted credentials outside .git/config. So this is hardening, not a finding.",
+    "artifact": "agents/h-samesrc/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Add a .dockerignore that excludes .git, .claude, .idea, .jbeval, .testing, .venv, dist, caches and .DS_Store. `COPY . .` currently puts all of them into the published image's /code (seen in the local image). If a future checkout version or a local build persists a token in .git/config, it would ship in the image.",
+   "cli.py:106 joins every dependency into one single-quoted argument (`uv pip install 'numpy pandas'`), so installing more than one package fails. Passing an argv list via asyncio.create_subprocess_exec instead of a shell string would fix this and also remove the operator-side quote-breaking. The same applies to cli.py:101 and mcp_server.py:21-23.",
+   "Pin GitHub Actions to commit SHAs, base images to digests, and srt to an exact version. Add an environment (with required reviewers) to the docker_hub publish job, as the pypi job already has."
+  ]
+ },
+ {
+  "coverage_id": ".github%2Fworkflows%2Fpublish.yml%23push%20tags%20v%2A::.github%2Fworkflows%2Fpublish.yml%23release%20publishing%20authority::.github::SUPPLY-CHAIN-AND-RELEASE.md%23Mutable%20and%20unbound%20build%20inputs",
+  "canonical_refs": {
+   "surface": ".github/workflows/publish.yml#push tags v*",
+   "boundary": ".github/workflows/publish.yml#release publishing authority",
+   "subsystem": ".github",
+   "attack_class": "SUPPLY-CHAIN-AND-RELEASE.md#Mutable and unbound build inputs"
+  },
+  "surface": ".github/workflows/publish.yml#push tags v*",
+  "boundary": ".github/workflows/publish.yml#release publishing authority",
+  "subsystem": ".github",
+  "attack_class": "SUPPLY-CHAIN-AND-RELEASE.md#Mutable and unbound build inputs",
+  "starting_paths": [
+   ".github/workflows/publish.yml",
+   ".github/workflows/pytest.yml",
+   ".github/actions/setup_python_environment/action.yaml",
+   "Dockerfile",
+   "uv.lock"
+  ],
+  "ordinary_attack_class_block": null,
+  "selected_companion_blocks": [
+   "SUPPLY-CHAIN-AND-RELEASE.md#Core discipline",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Mutable and unbound build inputs",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Untrusted code in a privileged workflow",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Release authorization and signing-policy gaps",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Build-context inclusion",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Universal moves",
+   "SUPPLY-CHAIN-AND-RELEASE.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u9",
+  "prior_status": "prior_covered_same_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-samesrc",
+  "reviewed_paths": [
+   ".github/actions/setup_python_environment/action.yaml",
+   ".github/workflows/publish.yml",
+   ".github/workflows/pytest.yml",
+   "Dockerfile",
+   "uv.lock"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     ".github/workflows/publish.yml",
+     ".github/workflows/pytest.yml",
+     ".github/actions/setup_python_environment/action.yaml"
+    ],
+    "invariant": "Contributor-controlled code (pull_request) must not run with publish secrets or write tokens",
+    "method": "source",
+    "result": "pytest.yml runs on pull_request, not pull_request_target. It references no secrets and declares no permissions, so fork PRs get a read-only token. publish.yml triggers only on push of v* tags, which needs repository write access. No untrusted-code-in-privileged-workflow path is visible in source.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     ".github/workflows/publish.yml",
+     ".github/actions/setup_python_environment/action.yaml",
+     "Dockerfile",
+     "uv.lock"
+    ],
+    "invariant": "Release builds must consume only inputs that a lower-trust party cannot change and that lead into published artifacts",
+    "method": "source",
+    "result": "Several inputs are mutable: action major tags (actions/checkout@v6, docker/*@v3-v7, astral-sh/setup-uv@v7, actions/attest@v4), base images ghcr.io/astral-sh/uv:trixie-slim and node:trixie-slim, `npm install -g @anthropic-ai/sandbox-runtime@'<=0.0.64'`, and the unpinned sandbox venv `uv pip install ${PYTHON_DEPENDENCIES}` (default pydantic). All of these writers are upstream maintainers or registries, not a lower-trust principal of this project. The project's own Python dependencies are locked (uv sync --frozen, uv.lock). This is hardening only, not a source-visible handoff failure.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     ".github/workflows/publish.yml"
+    ],
+    "invariant": "Release publication authority must be bound to the intended workflow and environment",
+    "method": "source",
+    "result": "The PyPI job uses environment `pypi` with id-token for trusted publishing. The docker_hub job has no environment gate, uses DOCKER_USERNAME/DOCKER_PASSWORD secrets, and publishes from any v* tag on any commit. Pushing such a tag already needs repository write access, which is the same principal as the maintainer. Tag protection and branch protection cannot be observed from source. Recorded as hardening, not a lower-trust bypass.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Add a .dockerignore that excludes .git, .claude, .idea, .jbeval, .testing, .venv, dist, caches and .DS_Store. `COPY . .` currently puts all of them into the published image's /code (seen in the local image). If a future checkout version or a local build persists a token in .git/config, it would ship in the image.",
+   "cli.py:106 joins every dependency into one single-quoted argument (`uv pip install 'numpy pandas'`), so installing more than one package fails. Passing an argv list via asyncio.create_subprocess_exec instead of a shell string would fix this and also remove the operator-side quote-breaking. The same applies to cli.py:101 and mcp_server.py:21-23.",
+   "Pin GitHub Actions to commit SHAs, base images to digests, and srt to an exact version. Add an environment (with required reviewers) to the docker_hub publish job, as the pypi job already has."
+  ]
+ },
+ {
+  "coverage_id": "Dockerfile%23image%20runtime%20via%20docker-entrypoint.sh::docker-entrypoint.sh%23--user%3Dnonroot%20privilege%20separation%20and%20container%20hardening::Dockerfile::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+  "canonical_refs": {
+   "surface": "Dockerfile#image runtime via docker-entrypoint.sh",
+   "boundary": "docker-entrypoint.sh#--user=nonroot privilege separation and container hardening",
+   "subsystem": "Dockerfile",
+   "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries"
+  },
+  "surface": "Dockerfile#image runtime via docker-entrypoint.sh",
+  "boundary": "docker-entrypoint.sh#--user=nonroot privilege separation and container hardening",
+  "subsystem": "Dockerfile",
+  "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "starting_paths": [
+   "Dockerfile",
+   "docker-entrypoint.sh",
+   "docker-compose.yml",
+   "setup_host.sh",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "selected_companion_blocks": [
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+   "CLOUD-AND-DEPLOYMENT.md#Host or control-plane capability exposure",
+   "CLOUD-AND-DEPLOYMENT.md#Secret exposure across workload boundaries",
+   "CLOUD-AND-DEPLOYMENT.md#Universal moves",
+   "CLOUD-AND-DEPLOYMENT.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u8",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-misc",
+  "reviewed_paths": [
+   "Dockerfile",
+   "docker-compose.yml",
+   "docker-entrypoint.sh",
+   "setup_host.sh",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "Dockerfile",
+     "docker-entrypoint.sh",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "In the Docker deployment the root server imports code from /code/.venv, and both /code/.venv and the shared interpreter venv /sandbox are owned by nonroot (Dockerfile:70,73). Sandboxed code running as nonroot (uid 999) must not be able to write them, which would give root code execution in the server or persistence across runs.",
+    "method": "local",
+    "result": "Reproduced the Docker mode (weaker nested bwrap, user=nonroot, /sandbox/.venv/bin/python). Writes to /code/.venv, /sandbox/.venv, /code, /tmp, /var/tmp and /home/nonroot all fail with OSError, and no files appeared afterwards. The ownership (nonroot 755 /code/.venv and /sandbox) is confirmed in the image, but bwrap's read-only bind blocks the chain.",
+    "artifact": "agents/h-misc/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "Dockerfile"
+    ],
+    "invariant": "The unshare --user wrapper plus privilege separation must not leave capabilities in the sandboxed interpreter that could cross the nonroot boundary",
+    "method": "local",
+    "result": "After 'unshare --ipc --user --map-current-user' and exec of python mapped to uid 999, CapPrm and CapEff are 0. The deeper user-namespace analysis belongs to the peer unshare unit.",
+    "artifact": "agents/h-misc/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "docker-compose.yml",
+     "setup_host.sh"
+    ],
+    "invariant": "Root-side cleanup of the sandbox-writable run dir (_remove_run_dir chmod walk, code_executor.py:59-71) must not follow sandbox-planted symlinks into root-owned or nonroot-owned server files",
+    "method": "source",
+    "result": "os.walk runs with followlinks=False and symlinked subdirs are skipped. The is_symlink-then-chmod window has no concurrent sandbox writer in Docker mode: bwrap's pid namespace and --die-with-parent stop all sandbox processes before the finally block runs. The top-level chmod targets the server-created uuid dir, whose parent the sandbox cannot write. rmtree is fd-based and does not follow symlinks. The compose seccomp/apparmor/systempaths unconfined setting and setup_host.sh's sysctl only enable bwrap and do not expose a host socket, device, or host path.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Dockerfile:70,73 chowns /code (including the root server's own .venv and default_srt_settings.json) and /sandbox (the interpreter venv shared by all runs) to nonroot, the same uid that runs untrusted code. Only bwrap's read-only bind stops sandboxed code from trojaning the root server or later runs. Leave these root-owned (drop --chown on the /code copy) and keep only the working directory owned by nonroot.",
+   "No .dockerignore: 'COPY . .' (Dockerfile:33) bakes .git, .claude, .idea, .jbeval, .testing, .venv and .DS_Store into the published image. The sandbox cannot read /code (denyRead), but image consumers can. Add a .dockerignore.",
+   "code_executor.py:177,240 log every submitted program and its full stdout/stderr at INFO. In multi-user deployments this keeps other users' code and results in server logs. Consider logging at DEBUG or logging hashes and sizes only.",
+   "code_executor.py:261 returns the full traceback.format_exc() to the unauthenticated client. Today it only exposes install and run-dir paths. A generic message plus a correlation id would avoid future leaks.",
+   "The per-process srt settings file from tempfile.mkstemp (code_executor.py:106) is never deleted, so one /tmp file is leaked per server start."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fcli.py%23run%20--mcp_transport%20%28operator-selectable%3B%20FastMCP%20stdio%20mode%29%20and%20CLI%2Flibrary%20use%20with%20an%20interactive%20TTY::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_run_sandboxed%20Popen%20inherits%20server%20stdin%20%28no%20stdin%3D%20argument%29%20plus%20utils%2Flogger.py%20PrintLoggerFactory%20writing%20to%20sys.stdout::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/cli.py#run --mcp_transport (operator-selectable; FastMCP stdio mode) and CLI/library use with an interactive TTY",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed Popen inherits server stdin (no stdin= argument) plus utils/logger.py PrintLoggerFactory writing to sys.stdout",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries"
+  },
+  "surface": "src/mcp_run_isolated_python/cli.py#run --mcp_transport (operator-selectable; FastMCP stdio mode) and CLI/library use with an interactive TTY",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed Popen inherits server stdin (no stdin= argument) plus utils/logger.py PrintLoggerFactory writing to sys.stdout",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/utils/logger.py",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "docker-compose.yml"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local IPC and exported-component attack classes",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules",
+   "AI-AND-LLM.md#MCP and sub-agent trust classes"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Framing, schema, and interpretation attack classes",
+    "reason": "JSON-RPC framing itself is FastMCP's; this unit covers only the stdio fd the target leaks to sandboxed code and its log output"
+   },
+   {
+    "block": "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+    "reason": "HTTP transport is owned by u4"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser code"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python"
+   }
+  ],
+  "label": "u19",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-stdio",
+  "reviewed_paths": [
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/logger.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-stdio",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Revalidate run-2 popen-inherits-server-stdin: no sandbox-reachable process inherits the server's stdin (the stdio protocol input) or other server fds",
+    "method": "source",
+    "result": "Fix closes the root cause. Both srt launches set stdin=subprocess.DEVNULL (pre-check subprocess.run at code_executor.py:120-127, sandbox Popen at 139-150); stdout/stderr are PIPEs; close_fds defaults to True so no other server descriptors pass. The only remaining stdin-inheriting subprocesses are operator-controlled, pre-serve-loop commands (mcp_server.py:21 `python --version`, cli.py:100/105 uv), which run no LLM- or sandbox-chosen code.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-stdio",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/mcp_server.py",
+     "src/mcp_run_isolated_python/cli.py",
+     "src/mcp_run_isolated_python/utils/logger.py",
+     "docker-entrypoint.sh"
+    ],
+    "invariant": "In FastMCP stdio mode, content that sandboxed code controls and that PrintLoggerFactory writes to sys.stdout must not be parsed as JSON-RPC frames by the MCP client",
+    "method": "local",
+    "result": "Can't be reached in the shipped CLI. I ran the real CLI with --mcp_transport=stdio (Docker-mode settings, real srt/bwrap) behind an mcp stdio_client. The server crashes before serving: run_mcp always passes host/port/path/stateless to mcp.run_async, and FastMCP 4.0.3 run_stdio_async rejects them with 'TypeError: TransportMixin.run_stdio_async() got an unexpected keyword argument host' (mcp_server.py:49-56). The client gets 'Connection closed' on initialize. The library (direct_use.py) never starts a transport. So no stdio stream exists for the logger to corrupt or for sandbox output to inject into.",
+    "artifact": "agents/h-stdio/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-stdio",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/logger.py",
+     "src/mcp_run_isolated_python/direct_use.py"
+    ],
+    "invariant": "Strings controlled by sandboxed code must not reach the operator's log stream or terminal as raw control sequences",
+    "method": "local",
+    "result": "Violated. I ran CodeSandbox.eval under real srt/bwrap as uid 999 (Docker-mode settings). Sandboxed code created a directory in ./output named ESC ]0;SANDBOX-TITLE BEL. The server's 'Skipping output entry that is not a regular file' warning wrote that name to stdout byte for byte (033 ] 0 ; ... \\a). A name containing CR/LF was repr-quoted instead. Cause: structlog 26.1.0 ConsoleRenderer._repr quotes a str only if it contains space, tab, '=', CR, LF or a quote character; ESC, BEL, VT, FF and similar bytes pass through. The sandbox's stdout inside result= is safe because the dict is repr'd.",
+    "artifact": "agents/h-stdio/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "ver-logesc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/logger.py"
+    ],
+    "invariant": "Values from the sandbox or the tool call should appear in operator logs only in escaped form, so they can never act as terminal control sequences.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor._collect_output_files:sandbox-controlled-output-name-logged-raw-terminal-escape-injection: Three values appeared on server stdout as raw, unescaped control bytes. name= showed 033 c (RIS terminal reset) for the symlink. name= showed 033 [ 1 A 033 [ 2 K VERLOGESC 033 ] 0 ; VTITLE \\a for the directory. code= showed # 033 ] 0 ; CODETITLE \\a. The first code string, which contains spaces and newlines, was repr-quoted. Evidence: agents/ver-logesc/artifacts/evidence1.txt. The impact on a live terminal was not tested; only the raw bytes on the log stream were observed.",
+    "artifact": "agents/ver-logesc/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor._collect_output_files:sandbox-controlled-output-name-logged-raw-terminal-escape-injection"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.py:_run_sandboxed/popen-inherits-server-stdin"
+  ],
+  "hardening": [
+   "The FastMCP stdio transport is unreachable: run_mcp (mcp_server.py:49-56) always passes host/port/path/stateless, and run_stdio_async rejects them with a TypeError. If stdio is ever enabled (e.g. via docker run -i ... --mcp_transport=stdio, which the entrypoint's \"$@\" allows), PrintLoggerFactory (logger.py:28), the rich banner (cli.py:91-92) and uv output (cli.py:100-107) all write to stdout, which is the JSON-RPC channel. Send logs and the banner to stderr (structlog.PrintLoggerFactory(file=sys.stderr), Console(stderr=True)) before supporting stdio."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fcli.py%23run%20CLI%20%2F%20direct_use.py%20CodeSandbox%20on%20macOS%20%28srt%20Seatbelt%20backend%2C%20user%3DNone%29::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_remove_run_dir%20path-based%20is_symlink-then-Path.chmod%20walk%20and%20rmtree%2C%20raced%20by%20a%20sandbox%20descendant%20that%20outlives%20the%20run%20%28no%20pid%20namespace%29::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/cli.py#run CLI / direct_use.py CodeSandbox on macOS (srt Seatbelt backend, user=None)",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_remove_run_dir path-based is_symlink-then-Path.chmod walk and rmtree, raced by a sandbox descendant that outlives the run (no pid namespace)",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries"
+  },
+  "surface": "src/mcp_run_isolated_python/cli.py#run CLI / direct_use.py CodeSandbox on macOS (srt Seatbelt backend, user=None)",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_remove_run_dir path-based is_symlink-then-Path.chmod walk and rmtree, raced by a sandbox descendant that outlives the run (no pid namespace)",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "default_srt_settings.json"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+    "reason": "host CLI mode on macOS, no container runtime"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+    "reason": "output bounds owned by u12"
+   }
+  ],
+  "label": "u22",
+  "prior_status": "new",
+  "attempts": [],
+  "wave": 2,
+  "status": "candidate",
+  "agent_id": "h-macrace",
+  "reviewed_paths": [
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-macrace",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The chmod applied during the cleanup walk (code_executor.py:63,67) must not follow symlinks (should pass follow_symlinks=False, use lchmod, or be dir-fd relative) so a swapped-in symlink cannot redirect it outside the run dir.",
+    "method": "local",
+    "result": "pathlib.Path.chmod follows symlinks: chmod(S_IRWXU) applied to a symlink 'link' -> dummy 'real_dir' changed real_dir's mode 0o555 -> 0o700 while link.is_symlink() stayed True. code_executor.py:67 uses Path.chmod with no follow_symlinks=False, so a symlinked entry redirects the chmod to its target.",
+    "artifact": "agents/h-macrace/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-macrace",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The is_symlink() guard and the chmod must be a single atomic operation on the same inode (no check/use gap).",
+    "method": "source",
+    "result": "code_executor.py:66-67 performs is_symlink() (an lstat) and then a separate path-based Path.chmod on the same path string. These are two distinct syscalls resolving by path, so an entry that passed is_symlink()==False can be replaced by a symlink before the chmod resolves it: a classic TOCTOU window. os.walk is top-down (dirs chmodded before descent), giving a survivor a window on every subdir.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-macrace",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The sandboxed principal must not be able to write into / rename entries of the run dir tree during cleanup (else it can perform the swap).",
+    "method": "source",
+    "result": "default_srt_settings.json sets filesystem.allowWrite=['.'] and _write_srt_settings (code_executor.py:95) adds allowRead '.'; the run dir is the sandbox cwd (Popen cwd=code_path, line 141) and CLAUDE_CODE_TMPDIR (line 147). The sandbox can create/rename/symlink entries inside its own run dir, which is exactly where the cleanup walk operates. The swap capability holds; the symlink target need not be writable at creation.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-macrace",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "No sandbox descendant survives the run to race the cleanup (prerequisite; descendant-survival root cause owned by u14).",
+    "method": "source",
+    "result": "On macOS (Seatbelt backend) there is no pid namespace and the Linux unshare wrapper is skipped (sys.platform!='linux', line 247). os.killpg(proc.pid, SIGKILL) at line 165 fires ONLY on timeout; on normal (non-timeout) exit _run_sandboxed just returns and _remove_run_dir runs in finally (line 267) while a backgrounded descendant keeps running. Thus a survivor can race cleanup on normal exit. The decisive macOS-only survival fact (u14) is not runnable in the Linux parent sandbox and host macOS execution is prohibited.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-macrace",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "TOCTOU in _remove_run_dir: a surviving sandbox descendant can make the unsandboxed server chmod any same-uid file or directory outside the run dir to 0700 (macOS CLI/library mode)",
+    "method": "local",
+    "result": "Verifier decision needs_validation for code_executor._remove_run_dir/toctou-symlink-following-chmod-escapes-sandbox: [\"macOS Seatbelt cannot run in the Linux parent sandbox, and running target code on the host macOS is prohibited. The end-to-end chain on the only affected platform cannot be observed here.\", \"Decisive fact 1 (owned by u14): on macOS with srt's Seatbelt backend and user=None, a setsid/double-forked descendant of the sandboxed interpreter keeps running after a normal (non-timeout) run exit and is still running while _remove_run_dir executes. This was refuted for Linux/Docker (evidence2) but is unverified on macOS.\", \"Decisive fact 2: srt's macOS Seatbelt profile lets that descendant rmdir/rename a subdirectory of its cwd and create a symlink there whose target is outside the allowWrite scope. Symlink creation is expected to be checked against the link path, not the target,",
+    "artifact": "agents/ver-macrace/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor._remove_run_dir/toctou-symlink-following-chmod-escapes-sandbox"
+  ],
+  "unresolved": [
+   "Whether macOS Seatbelt lets a surviving descendant unlink/rename a run-dir subdir and create a symlink there pointing outside the run dir (while denying a direct chmod of that target) requires a real macOS run to observe.",
+   "Whether the check/use race window (code_executor.py:66->67) is practically winnable per subdir on a real run."
+  ],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Make the cleanup chmod symlink-safe and race-safe: walk with directory file descriptors (os.walk with a dir_fd / os.scandir on an O_DIRECTORY|O_NOFOLLOW fd) and use os.chmod(name, mode, dir_fd=..., follow_symlinks=False) (or lchmod), mirroring the O_NOFOLLOW fd-relative pattern already used in _collect_output_files (code_executor.py:186-198). This removes the check/use gap and prevents any symlink from redirecting the chmod.",
+   "Alternatively, since the intent is only to unlock dirs the sandbox chmodded, unlink symlinked entries during the walk instead of chmodding them, and never chmod a path that could resolve to a symlink.",
+   "Root-cause defense-in-depth (owned by u14): ensure no sandbox descendant outlives the run on macOS as well (e.g. kill the process group on normal exit too, not only on timeout), so the cleanup window has no live writer.",
+   "Note: rmtree(ignore_errors=True) refill/recreate and descendant-survival concerns are owned by peer units (rmtree-ignore-errors-sandbox-locked-dir, sandbox-descendants-outlive-run-without-pid-namespace); this note is limited to the path-following chmod sink."
+  ],
+  "critic_reason": "u14 showed that sandbox descendants survive both normal exit and setsid-on-timeout on macOS. u8, u5 and u13 dismissed the TOCTOU in the chmod walk at code_executor.py:64-68 (is_symlink check, then a path-based chmod that follows symlinks) only because 'no sandbox process survives on Linux'. u5 and u13 wrote the macOS chain down as hardening, saying a surviving descendant could swap a subdir for a symlink and make the server chmod 0700 a same-user directory outside Seatbelt's write scope. Nobody validated this chain. Nobody checked either whether a survivor can recreate or refill the run dir after rmtree, or how the output collection and cleanup windows interleave with a live writer, even though u1 treats 'no live writer' as a precondition."
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fcli.py%23run%20CLI%20%2F%20direct_use.py%20CodeSandbox%20on%20macOS%20%28srt%20Seatbelt%20backend%2C%20user%3DNone%29::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_run_sandboxed%20process-group%20kill%20on%20timeout%20and%20normal%20exit%20without%20bwrap%20pid%20namespace::src%2Fmcp_run_isolated_python::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Detached%20work%20after%20cancellation",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/cli.py#run CLI / direct_use.py CodeSandbox on macOS (srt Seatbelt backend, user=None)",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed process-group kill on timeout and normal exit without bwrap pid namespace",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation"
+  },
+  "surface": "src/mcp_run_isolated_python/cli.py#run CLI / direct_use.py CodeSandbox on macOS (srt Seatbelt backend, user=None)",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed process-group kill on timeout and normal exit without bwrap pid namespace",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "default_srt_settings.json",
+   "tests/unit/code_executor/test_security.py"
+  ],
+  "ordinary_attack_class_block": null,
+  "selected_companion_blocks": [
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#File descriptor, handle, and temporary-resource leaks",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+    "reason": "stdout/stderr and output-file bounds are platform-independent Python and already covered by u5/u12"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code"
+   }
+  ],
+  "label": "u14",
+  "prior_status": "prior_needs_validation",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-macos",
+  "reviewed_paths": [
+   "README.md",
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "tests/unit/code_executor/test_security.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-macos",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "tests/unit/code_executor/test_security.py"
+    ],
+    "invariant": "All processes spawned by a run end when the run ends, on both the timeout path and the normal-exit path, on macOS where there is no bwrap PID namespace",
+    "method": "source",
+    "result": "_run_sandboxed (code_executor.py:139-168) calls os.killpg(proc.pid, SIGKILL) only inside the TimeoutExpired branch (161-166). On normal exit nothing kills the process group. A process that calls setsid() leaves the pgid, so killpg on timeout misses it. On Linux the bwrap PID namespace with --die-with-parent covers this; on darwin nothing does (the unshare prefix at 245-249 is Linux-only and is not a PID namespace anyway). test_timeout_kills_all_sandboxed_processes (test_security.py:49-64) only tests a same-pgid child on the timeout path.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-macos",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Server-side reader threads and pipe fds are released once each run finishes",
+    "method": "source",
+    "result": "Reader threads are daemon threads that block on stream.read(65536) until EOF (48-51). reader.join(timeout=5) (167-168) gives up and returns without closing proc.stdout or proc.stderr. The srt CLI spawns the sandboxed shell with stdio 'inherit' (srt 0.0.64 dist/cli.js:210-213), so any surviving descendant keeps the write ends open. For each such run the server holds 2 threads and 2 fds, adds a 10 s delay, and drops the run's buffered stdout.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-macos",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/direct_use.py"
+    ],
+    "invariant": "Run the executor-side lifecycle with the command built for macOS (sys.platform patched to darwin, so there is no unshare prefix) and a stub srt that copies the srt 0.0.64 macOS CLI lifecycle but applies no Seatbelt policy",
+    "method": "local",
+    "result": "A (normal exit, background child): run_python_code returned after 10.3 s with status=success and output='' even though the parent printed. The child was still alive afterwards. Server threads went from 1 to 3 and fds from 4 to 6. B (timeout, child called setsid): returned 'Timed out after 2s' after 12.2 s. The child survived in its own session (pgid=sid=22), with threads at 5 and fds at 8. C (control, timeout, no setsid): killpg reached the child. The stub has no Seatbelt confinement, so these results cover the executor logic only.",
+    "artifact": "agents/h-macos/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-macos",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Whether the a80b830 per-run 'ulimit -u 256' blocks descendant creation on macOS",
+    "method": "source",
+    "result": "The limit is applied in the sandbox shell (242-244) and sets both soft and hard. On macOS, fork() checks the per-uid process count against RLIMIT_NPROC. On the dev host, read-only 'ps -U uid' counts 433 processes, so on a typical desktop fork() in the sandbox fails with EAGAIN. That blocks the escape there, and also breaks any sandboxed subprocess use. A server account with fewer than 256 processes (for example a dedicated launchd or service user) can still fork, so the limit is incidental and depends on deployment. It is not a lifecycle control.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-macos",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The srt macOS backend itself kills or contains descendants when the sandboxed command exits",
+    "method": "source",
+    "result": "srt 0.0.64 macos-sandbox-utils.js:284-287 emits '(allow process-exec)', '(allow process-fork)' and '(allow signal (target same-sandbox))'. setsid is not a Seatbelt-filterable operation. cli.js:215-230 calls process.exit(code) when the direct child exits and never kills descendants or the process group. The settings written by _write_srt_settings add nothing process-related.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-macdetach",
+    "reviewed_paths": [
+     "README.md",
+     "src/mcp_run_isolated_python/cli.py",
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/direct_use.py",
+     "tests/unit/code_executor/test_security.py"
+    ],
+    "invariant": "On macOS (Seatbelt backend), processes started by sandboxed code outlive the run: nothing kills them on normal exit, a setsid() child escapes the timeout killpg, and survivors that keep stdio pin reader threads and pipe fds in the server",
+    "method": "local",
+    "result": "Verifier decision needs_validation for code_executor._run_sandboxed:sandbox-descendants-outlive-run-without-pid-namespace: [\"Real macOS Seatbelt behaviour was not observed. sandbox-exec cannot run in the approved Linux container sandbox, and target or srt code must not run on the macOS host. From source, srt 0.0.64 macos-sandbox-utils.js:284-287 allows process-fork and process-exec, and cli.js:202-230 spawns with stdio 'inherit' and exits on direct-child exit with no descendant cleanup. However, survival past srt exit and killpg was shown only with a stub srt that has no Seatbelt (agents/h-macos/artifacts/evidence1.txt). The Linux control at current source left no survivors (agents/ver-macdetach/artifacts/evidence1.txt).\", \"Deployment-dependent and not established: whether any supported deployment runs the server or CodeSandbox directly on macOS, and whether the server uid has fewer than",
+    "artifact": "agents/ver-macdetach/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor._run_sandboxed:sandbox-descendants-outlive-run-without-pid-namespace"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor._run_sandboxed:sandbox-descendants-outlive-run-without-pid-namespace"
+  ],
+  "hardening": [
+   "On macOS the fixed 'ulimit -u 256' is counted per uid. On a typical desktop (433 processes on the dev host) every fork, subprocess or multiprocessing call in sandboxed code fails with EAGAIN. That is a functional regression, and the limit gives no per-run bound.",
+   "_drain uses BufferedReader.read(65536), which waits for 64 KiB or EOF. If EOF never arrives, output already written is dropped rather than returned. Using os.read or read1 and closing proc.stdout/stderr after the join would release the fds and keep partial output.",
+   "The fix is the same for both paths: always call os.killpg(proc.pid, SIGKILL) after proc.wait(), not only on timeout, and close the pipes after joining. setsid escapes still need containment on macOS, for example a per-run uid whose processes can all be killed, or a job/pgroup check before returning. Add regression tests for setsid and normal-exit background children."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fcli.py%23run%20CLI%20arguments%20and%20PYTHON_DEPENDENCIES%20env::src%2Fmcp_run_isolated_python%2Fcli.py%23create_subprocess_shell%20operator%20input::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Injection",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/cli.py#run CLI arguments and PYTHON_DEPENDENCIES env",
+   "boundary": "src/mcp_run_isolated_python/cli.py#create_subprocess_shell operator input",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Injection"
+  },
+  "surface": "src/mcp_run_isolated_python/cli.py#run CLI arguments and PYTHON_DEPENDENCIES env",
+  "boundary": "src/mcp_run_isolated_python/cli.py#create_subprocess_shell operator input",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Injection",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "docker-entrypoint.sh"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Injection",
+  "selected_companion_blocks": [],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u7",
+  "prior_status": "prior_covered_same_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-samesrc",
+  "reviewed_paths": [
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/settings.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/cli.py",
+     "src/mcp_run_isolated_python/utils/settings.py"
+    ],
+    "invariant": "Shell strings built in cli.run (uv venv --python '<python_version>', uv pip install '<deps>') must not take values from a principal below the operator",
+    "method": "source",
+    "result": "python_version and python_dependencies come only from cyclopts CLI arguments (cli.py:21-28, 100-108), which the operator controls. Single-quote interpolation can be broken by a quote in the value, but only the operator can supply it, and the operator can already run arbitrary commands. No MCP client, LLM or sandbox value reaches these calls. The PYTHON_DEPENDENCIES env var is only split and logged (cli.py:114-116) and then placed in the tool description text. That text is operator-trusted and is not a shell sink. No lower-trust injection path.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "The `'<path_to_python_interpreter>' --version` shell string in run_mcp must not take lower-trust input",
+    "method": "source",
+    "result": "path_to_python_interpreter comes from the --path_to_python CLI flag, the uv venv default, or library-caller CodeSandboxSettings (mcp_server.py:21-23), all trusted. Tool arguments never reach it. Its stdout, read once at startup, only fills the tool description. Not reachable by lower-trust principals.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-samesrc",
+    "reviewed_paths": [
+     "docker-entrypoint.sh"
+    ],
+    "invariant": "The unquoted ${PYTHON_DEPENDENCIES} in the entrypoint's uv pip install (run as root) must be controlled only by the operator",
+    "method": "source",
+    "result": "The value is container env set by whoever runs `docker run -e` or writes the compose file (docker-compose.yml environment), i.e. the operator. Word splitting is deliberate (SC2086 comment). Option injection such as --index-url is still operator-controlled. The MCP server and sandboxed code cannot set it. No finding.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Add a .dockerignore that excludes .git, .claude, .idea, .jbeval, .testing, .venv, dist, caches and .DS_Store. `COPY . .` currently puts all of them into the published image's /code (seen in the local image). If a future checkout version or a local build persists a token in .git/config, it would ship in the image.",
+   "cli.py:106 joins every dependency into one single-quoted argument (`uv pip install 'numpy pandas'`), so installing more than one package fails. Passing an argv list via asyncio.create_subprocess_exec instead of a shell string would fix this and also remove the operator-side quote-breaking. The same applies to cli.py:101 and mcp_server.py:21-23.",
+   "Pin GitHub Actions to commit SHAs, base images to digests, and srt to an exact version. Add an environment (with required reviewers) to the docker_hub publish job, as the pypi job already has."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fcode_executor.py%23run_python_code%20sandbox%20command%20%28unshare%20--ipc%20--user%20--map-current-user%20wrapper%29::default_srt_settings.json%23srt%20bwrap%20filesystem%2Fnetwork%2Fseccomp%20confinement%20of%20sandboxed%20code::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/code_executor.py#run_python_code sandbox command (unshare --ipc --user --map-current-user wrapper)",
+   "boundary": "default_srt_settings.json#srt bwrap filesystem/network/seccomp confinement of sandboxed code",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries"
+  },
+  "surface": "src/mcp_run_isolated_python/code_executor.py#run_python_code sandbox command (unshare --ipc --user --map-current-user wrapper)",
+  "boundary": "default_srt_settings.json#srt bwrap filesystem/network/seccomp confinement of sandboxed code",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "default_srt_settings.json",
+   "Dockerfile",
+   "docker-compose.yml",
+   "docker-entrypoint.sh"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+  "selected_companion_blocks": [
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+   "CLOUD-AND-DEPLOYMENT.md#Host or control-plane capability exposure",
+   "CLOUD-AND-DEPLOYMENT.md#Universal moves",
+   "CLOUD-AND-DEPLOYMENT.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+    "reason": "the unshare wrapper runs entirely inside the sandbox; server-side file handling is owned by the output and cleanup units"
+   }
+  ],
+  "label": "u20",
+  "prior_status": "new",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-userns",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "docker-compose.yml",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-userns",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The unshare --ipc --user --map-current-user wrapper (code_executor.py:245-250) must not give sandboxed code capabilities it can use against srt/bwrap confinement.",
+    "method": "local",
+    "result": "In Docker-equivalent --srt mode (user=nonroot, enableWeakerNestedSandbox=true) the sandboxed python runs as uid 999 mapped 999->999 in a fresh user+IPC namespace with CapEff=0, NoNewPrivs=1, Seccomp=2. execve of the interpreter by a non-zero uid drops the caps the new userns would otherwise grant, so the wrapper gives the code no capability. 'unshare --mount' from the code fails with EPERM.",
+    "artifact": "agents/h-userns/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-userns",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "default_srt_settings.json",
+     "Dockerfile",
+     "docker-compose.yml"
+    ],
+    "invariant": "Full capabilities inside a nested user namespace (whether from the wrapper or created by the code) must not undo srt denyRead (working dir hidden, only own run dir visible), read-only binds, or the network namespace.",
+    "method": "local",
+    "result": "Nested user namespaces are reachable with or without the wrapper: bwrap does not pass --disable-userns, and 'unshare --user --map-root-user --mount' gives CapEff=000001ffffffffff. Even so, umount2(MNT_DETACH) of the /scratch/wd tmpfs, of the run-dir bind and of / all return EINVAL (the kernel MNT_LOCKED them when a less-privileged mount namespace was created). 'mount -o remount,bind,rw /' is denied. A proc mount in a new pid namespace is denied. After these attempts the dummy sibling run dir stays hidden: ls /scratch/wd shows only the own run. A new netns is only an empty namespace. No confinement bypass.",
+    "artifact": "agents/h-userns/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-userns",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The userns wrapper must not weaken the per-run ulimit -u / -f limits (code_executor.py:242-244).",
+    "method": "source",
+    "result": "The ulimits are set by the shell before exec unshare, so they are inherited. Since kernel 5.14, RLIMIT_NPROC ucounts are charged at every userns level up to init. The copy_process bypass needs capable(CAP_SYS_RESOURCE/CAP_SYS_ADMIN) in init_user_ns, and raising the hard limit needs init-ns CAP_SYS_RESOURCE, so caps in a child userns cannot lift either limit. The per-uid sharing of RLIMIT_NPROC across concurrent runs is a pre-existing property owned by the resource-limit unit and does not change with the wrapper.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Sandboxed code runs as uid 999 but gid=0 with supplementary group 0 (root), observed via id in Docker mode. subprocess.Popen(user=...) in code_executor.py:139-150 sets no group=/extra_groups=, so the root server's groups are inherited. This belongs to the peer unit on subprocess identity (Access control); passing group=<user's primary gid> and extra_groups=[] would drop it.",
+   "Nested user namespaces (with full caps in the child ns, plus new net/mount namespaces) can be created from inside the sandbox whether or not the wrapper is present, because srt's bwrap does not use --disable-userns. docker-compose.yml also sets seccomp=unconfined, so this exposes the kernel userns attack surface. The kernel's mount locking held in the tests.",
+   "srt leaves per-run claude-empty-* dirs and claude-http-*.sock / srt-mux-*.sock files in the server's /tmp, and each CodeExecutor instance leaves one srt-settings-*.json from tempfile.mkstemp (code_executor.py:106) that is never removed. These are not visible to or writable by the sandbox. Temporary-resource leak, owned by the cleanup/leak unit."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fdirect_use.py%23CodeSandbox.eval::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23run_python_code%20output%20directory%20collection::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/direct_use.py#CodeSandbox.eval",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#run_python_code output directory collection",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Resource and file handling"
+  },
+  "surface": "src/mcp_run_isolated_python/direct_use.py#CodeSandbox.eval",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#run_python_code output directory collection",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Resource and file handling",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/direct_use.py",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Resource and file handling",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u2",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-output",
+  "reviewed_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/direct_use.py",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Library entry (sync and async eval) must reach the same hardened output collection with no parallel unguarded path.",
+    "method": "source",
+    "result": "_CodeSandboxSyncClient.eval and _CodeSandboxAsyncClient.eval (via asyncio.to_thread) both call CodeExecutor.run_python_code unchanged (direct_use.py:59-60,72-73); no alternate file-return path exists. Same controls and the same residual (see candidate on the RESOURCE unit) apply; settings are library-caller trusted.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor._collect_output_files:no-aggregate-output-file-bound"
+  ],
+  "hardening": [
+   "Base64/JSON amplification: 47 MB of returned PNG data cost 62.9 MB of JSON and +100.7 MB server RSS before FastMCP serialization (evidence2), so the 200 MB budget means roughly 430 MB+ per request. Combined with unbounded concurrent requests (peer-owned admission unit) and compose mem_limit 2g, a few parallel requests can exhaust memory. Consider a much lower total return budget.",
+   "Files that would go over the per-file or total budget are still read into memory in full (up to 100 MB each) before being skipped (code_executor.py:200-203). Use fstat st_size to skip them without reading.",
+   "A symlinked output/ directory makes os.open raise ELOOP, which returns a full traceback to the client (code_executor.py:186, 261). This is harmless but noisy; handle it as an empty output instead."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code%20%28Docker%20mode%3A%20root%20server%2C%20code%20as%20nonroot%20via%20Popen%20user%3D%29::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_run_sandboxed%20%2F%20model_post_init%20subprocess%20group%20identity%20%28Popen%2Fsubprocess.run%20user%3D%20without%20group%3D%2Fextra_groups%3D%2C%20so%20sandboxed%20code%20keeps%20gid%200%20and%20the%20root%20server%27s%20supplementary%20groups%29::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (Docker mode: root server, code as nonroot via Popen user=)",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed / model_post_init subprocess group identity (Popen/subprocess.run user= without group=/extra_groups=, so sandboxed code keeps gid 0 and the root server's supplementary groups)",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (Docker mode: root server, code as nonroot via Popen user=)",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed / model_post_init subprocess group identity (Popen/subprocess.run user= without group=/extra_groups=, so sandboxed code keeps gid 0 and the root server's supplementary groups)",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "Dockerfile",
+   "docker-entrypoint.sh",
+   "docker-compose.yml",
+   "default_srt_settings.json"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+   "CLOUD-AND-DEPLOYMENT.md#Host or control-plane capability exposure",
+   "CLOUD-AND-DEPLOYMENT.md#Secret exposure across workload boundaries",
+   "CLOUD-AND-DEPLOYMENT.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+    "reason": "server-side file handling on the run dir is owned by u1/u5/u13; this unit covers only the sandboxed process's group credentials"
+   },
+   {
+    "block": "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+    "reason": "inbound HTTP owned by u4"
+   }
+  ],
+  "label": "u21",
+  "prior_status": "new",
+  "attempts": [],
+  "wave": 2,
+  "status": "covered",
+  "agent_id": "h-gid",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "docker-compose.yml",
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/utils/settings.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-gid",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/settings.py"
+    ],
+    "invariant": "Sandboxed code launched by the root server with user=nonroot must not hold root-group credentials that grant access to protected resources",
+    "method": "source",
+    "result": "subprocess.run (code_executor.py:120-127) and Popen (139-150) pass only user=settings.user; no group=/extra_groups=, so CPython setreuid()s to 999 while leaving gid/egid 0 and the server's supplementary groups. _make_run_dir chowns only the user (group stays 0); code.py is written by root with umask 022 (0644); srt settings file is mkstemp then 0644. None of these server-created files rely on group-only permissions, so gid 0 grants nothing extra on them.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-gid",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "Dockerfile",
+     "docker-entrypoint.sh",
+     "docker-compose.yml",
+     "default_srt_settings.json"
+    ],
+    "invariant": "No group-0-only readable/writable file, device, IPC object or /proc entry is reachable from inside the srt+bwrap mount view in the shipped Docker image",
+    "method": "local",
+    "result": "Real srt+bwrap Docker-mode run confirmed sandbox creds uid 999, gid/egid 0, groups [0] (the same in /proc/self/status). Walking the image found only gid-0 group-only entries that don't matter: empty dpkg/apt lock files (0640), root:root 0775 man/debconf dirs (writes blocked by srt's read-only bind), and /proc/<pid>/net/ip*_tables_{names,matches,targets} (netfilter names). There are no such /dev nodes and nothing in /tmp, /dev/shm, /run or /dev/mqueue. A dummy root:root 0640 file outside the srt denyRead set could be read, which shows the gid-0 capability exists, but the shipped image has no such protected file. Writing to a 0660 dummy failed because of the srt read-only mount.",
+    "artifact": "agents/h-gid/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "code_executor.py:120-127,139-150: when settings.user is set, drop root group credentials as well: pass group=pwd.getpwnam(user).pw_gid and extra_groups=[] (or process_group via os.initgroups) to subprocess.run/Popen. Right now sandboxed code runs with gid 0 and supplementary group 0 (verified locally). It reaches no protected resource in the shipped image. However, any root:root 0640/0660 file an operator adds to the container (for example a mounted secret or config outside working_directory and not in srt denyRead) becomes readable by sandboxed code through group 0. With egid 0 the code can also set the setgid bit on its own files with group root. Regression check: run code printing os.getgid(), os.getgroups() and assert the result is 999 [999]."
+  ],
+  "critic_reason": "Popen (code_executor.py:139-150) and the pre-check subprocess.run (120-127) pass only user=settings.user. u20 and u18 both observed uid 999 with gid=0 and supplementary group 0 in Docker mode, and both deferred it to 'the peer unit on subprocess identity' (u3). u3's identity check only confirmed uid 999 and the env allowlist; it never looked at groups. Nobody has checked which group-0-readable or writable paths or IPC objects are visible inside the bwrap mount view (the /tmp srt sockets and settings file, /proc entries, container files with 0640/0660 root-group modes, /dev nodes), so this path is unowned."
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code%20%28sandboxed%20code%20as%20principal%3B%20Docker%20weaker-nested%20and%20macOS%20Seatbelt%20modes%29::default_srt_settings.json%23network%20policy%20%28allowedDomains%20%5B%5D%2C%20allowLocalBinding%20false%29%20passed%20through%20_write_srt_settings%2C%20plus%20the%20srt%20host-side%20HTTP%2FSOCKS%20proxy%20and%20its%20per-run%20credentials::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (sandboxed code as principal; Docker weaker-nested and macOS Seatbelt modes)",
+   "boundary": "default_srt_settings.json#network policy (allowedDomains [], allowLocalBinding false) passed through _write_srt_settings, plus the srt host-side HTTP/SOCKS proxy and its per-run credentials",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (sandboxed code as principal; Docker weaker-nested and macOS Seatbelt modes)",
+  "boundary": "default_srt_settings.json#network policy (allowedDomains [], allowLocalBinding false) passed through _write_srt_settings, plus the srt host-side HTTP/SOCKS proxy and its per-run credentials",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "Dockerfile",
+   "docker-compose.yml",
+   "README.md"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+   "CLOUD-AND-DEPLOYMENT.md#Metadata and internal-service reachability",
+   "CLOUD-AND-DEPLOYMENT.md#Secret exposure across workload boundaries",
+   "CLOUD-AND-DEPLOYMENT.md#Universal moves",
+   "CLOUD-AND-DEPLOYMENT.md#Validation rules",
+   "AI-AND-LLM.md#Excessive agency and confused-deputy authority"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "WEB-PROTOCOL-AND-AUTH.md#Host and forwarded-header trust",
+    "reason": "the inbound HTTP transport is owned by u4 (confirmed); this unit covers egress from the sandbox"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target"
+   }
+  ],
+  "label": "u17",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-misc",
+  "reviewed_paths": [
+   "Dockerfile",
+   "README.md",
+   "default_srt_settings.json",
+   "docker-compose.yml",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/code_executor.py",
+     "Dockerfile",
+     "docker-compose.yml"
+    ],
+    "invariant": "With allowedDomains [] in Docker weaker-nested mode, sandboxed code holding the per-run proxy credential (exposed in HTTP_PROXY/ALL_PROXY) must not reach the MCP server port in the container netns, loopback services, the metadata IP, or the internet, whether directly or through the srt HTTP/SOCKS proxies",
+    "method": "local",
+    "result": "A local fixture listener on 0.0.0.0:6400 was never contacted. Direct TCP to 127.0.0.1:6400 was refused because bwrap has its own netns. HTTP proxy CONNECT and GET to 127.0.0.1:6400, localhost:6400 and 169.254.169.254:80 all returned 403. SOCKS5 on localhost:1080 with the credential to 127.0.0.1:6400 got reply 0x02 (not allowed by ruleset). The host-side SOCKS port is unreachable from inside. Creating AF_UNIX sockets returns EPERM (seccomp), so allowUnixSockets [] holds. Binding to loopback succeeds but only inside the private netns.",
+    "artifact": "agents/h-misc/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "README.md"
+    ],
+    "invariant": "_write_srt_settings must pass the operator's network policy through to srt unchanged",
+    "method": "source",
+    "result": "_write_srt_settings (code_executor.py:89-111) changes only filesystem.denyRead, allowRead and denyWrite, so the network block from default_srt_settings.json reaches srt as-is. macOS Seatbelt mode uses the same srt proxy filter. It was not executed locally (Linux image only), but the policy path is identical in source.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Dockerfile:70,73 chowns /code (including the root server's own .venv and default_srt_settings.json) and /sandbox (the interpreter venv shared by all runs) to nonroot, the same uid that runs untrusted code. Only bwrap's read-only bind stops sandboxed code from trojaning the root server or later runs. Leave these root-owned (drop --chown on the /code copy) and keep only the working directory owned by nonroot.",
+   "No .dockerignore: 'COPY . .' (Dockerfile:33) bakes .git, .claude, .idea, .jbeval, .testing, .venv and .DS_Store into the published image. The sandbox cannot read /code (denyRead), but image consumers can. Add a .dockerignore.",
+   "code_executor.py:177,240 log every submitted program and its full stdout/stderr at INFO. In multi-user deployments this keeps other users' code and results in server logs. Consider logging at DEBUG or logging hashes and sizes only.",
+   "code_executor.py:261 returns the full traceback.format_exc() to the unauthenticated client. Today it only exposes install and run-dir paths. A generic message plus a correlation id would avoid future leaks.",
+   "The per-process srt settings file from tempfile.mkstemp (code_executor.py:106) is never deleted, so one /tmp file is leaked per server start."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code%20%28sandboxed%20code%20as%20principal%3B%20Docker%20weaker-nested%20srt%2Bbwrap%20and%20macOS%20Seatbelt%20CLI%20modes%29::srt%20default%20write%2FIPC%20allowances%20%28%2Fdev%2F%2A%2C%20%2Fdev%2Fshm%2C%20POSIX%20shm%2C%20mach%2Fnotification%20services%29%20not%20restricted%20by%20_write_srt_settings%3B%20cross-run%20shared%20channels%20outside%20the%20run%20dir::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (sandboxed code as principal; Docker weaker-nested srt+bwrap and macOS Seatbelt CLI modes)",
+   "boundary": "srt default write/IPC allowances (/dev/*, /dev/shm, POSIX shm, mach/notification services) not restricted by _write_srt_settings; cross-run shared channels outside the run dir",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (sandboxed code as principal; Docker weaker-nested srt+bwrap and macOS Seatbelt CLI modes)",
+  "boundary": "srt default write/IPC allowances (/dev/*, /dev/shm, POSIX shm, mach/notification services) not restricted by _write_srt_settings; cross-run shared channels outside the run dir",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "default_srt_settings.json",
+   "Dockerfile",
+   "docker-compose.yml",
+   "README.md"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules",
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "WEB-PROTOCOL-AND-AUTH.md#Host and forwarded-header trust",
+    "reason": "inbound HTTP owned by u4"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+    "reason": "server-side buffering owned by u12/u5"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target"
+   }
+  ],
+  "label": "u18",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-userns",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-userns",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "default_srt_settings.json",
+     "Dockerfile"
+    ],
+    "invariant": "Revalidating run-2 code_executor.py:_run_sandboxed/srt-bwrap-no-ipc-namespace-shared-across-runs and code_executor.py:_write_srt_settings/srt-default-write-paths-shared-across-runs (Linux/Docker mode): no writable or IPC channel outside the run dir may be shared between runs or survive a run.",
+    "method": "local",
+    "result": "Two sequential runs, each probing /tmp, /var/tmp, /dev/shm, /dev/mqueue, /home/nonroot, /tmp/claude, /run, /sandbox and /code for a marker left by the previous run. /dev/shm is writable but private to each run: bwrap gives each run its own /dev tmpfs, and the second run did not see the first run's marker. Every other location is denied or absent, including srt's implicit /tmp/claude, which is now in denyWrite. Each run gets a distinct IPC namespace from unshare --ipc (inode differs per run), so SysV IPC and POSIX mqueues are per-run. The run-2 Linux fixes close these root causes.",
+    "artifact": "agents/h-userns/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-userns",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Parallel-path check: the IPC isolation fix must cover every platform path.",
+    "method": "source",
+    "result": "The unshare prefix applies only when sys.platform=='linux' and unshare is on PATH (code_executor.py:245-249). On macOS Seatbelt, POSIX IPC and notifications stay unfiltered, but the prior rejected claim code_executor.py:_write_srt_settings/seatbelt-unfiltered-posix-ipc-and-notifications suppresses that exact claim and there is no new evidence. On Linux without unshare the run silently falls back to a shared IPC namespace. That depends on the operator environment; unshare (util-linux) is present in the shipped image.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.py:_run_sandboxed/srt-bwrap-no-ipc-namespace-shared-across-runs",
+   "code_executor.py:_write_srt_settings/seatbelt-unfiltered-posix-ipc-and-notifications"
+  ],
+  "hardening": [
+   "Sandboxed code runs as uid 999 but gid=0 with supplementary group 0 (root), observed via id in Docker mode. subprocess.Popen(user=...) in code_executor.py:139-150 sets no group=/extra_groups=, so the root server's groups are inherited. This belongs to the peer unit on subprocess identity (Access control); passing group=<user's primary gid> and extra_groups=[] would drop it.",
+   "Nested user namespaces (with full caps in the child ns, plus new net/mount namespaces) can be created from inside the sandbox whether or not the wrapper is present, because srt's bwrap does not use --disable-userns. docker-compose.yml also sets seccomp=unconfined, so this exposes the kernel userns attack surface. The kernel's mount locking held in the tests.",
+   "srt leaves per-run claude-empty-* dirs and claude-http-*.sock / srt-mux-*.sock files in the server's /tmp, and each CodeExecutor instance leaves one srt-settings-*.json from tempfile.mkstemp (code_executor.py:106) that is never removed. These are not visible to or writable by the sandbox. Temporary-resource leak, owned by the cleanup/leak unit."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code%20%28unauthenticated%20HTTP%2C%20Docker%200.0.0.0%3A6400%29::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_run_sandboxed%20per-run%20resource%20limits%20%28pids%2Fmemory%2Fdisk%20in%20run%20dir%29%20and%20concurrent-run%20admission%20%28anyio%20worker%20threads%29::src%2Fmcp_run_isolated_python::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Worker%2C%20pool%2C%20and%20priority%20starvation",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (unauthenticated HTTP, Docker 0.0.0.0:6400)",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed per-run resource limits (pids/memory/disk in run dir) and concurrent-run admission (anyio worker threads)",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Worker, pool, and priority starvation"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code (unauthenticated HTTP, Docker 0.0.0.0:6400)",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_run_sandboxed per-run resource limits (pids/memory/disk in run dir) and concurrent-run admission (anyio worker threads)",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Worker, pool, and priority starvation",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/settings.py",
+   "docker-compose.yml",
+   "Dockerfile",
+   "default_srt_settings.json"
+  ],
+  "ordinary_attack_class_block": null,
+  "selected_companion_blocks": [
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Worker, pool, and priority starvation",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Reachable fatal error or deadlock",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules",
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+    "reason": "server-side output buffering is owned by u12 and the no-aggregate-output-file-bound candidate"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation",
+    "reason": "covered on Linux by u5/u10; the macOS variant is proposed separately"
+   }
+  ],
+  "label": "u16",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-limits",
+  "reviewed_paths": [
+   "Dockerfile",
+   "README.md",
+   "docker-compose.yml",
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-limits",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "docker-compose.yml",
+     "Dockerfile"
+    ],
+    "invariant": "a80b830's ulimit -u 256 must give each run its own bounded process budget so one run cannot starve concurrent runs",
+    "method": "local",
+    "result": "Failed. All runs execute as one uid (999 in Docker); RLIMIT_NPROC is per-uid, so ulimit -u 256 is a POOL SHARED across concurrent runs, not per-run. Reproduced: one attacker run exhausting the shared process pool caused a concurrent victim run to fail with 'Tool run failed... it is broken' (server Popen EAGAIN caught by the broad except), recovering after the attacker exited. Same root cause as run-2 no-per-run-resource-limits; the fix lowered/shared the ceiling but did not add per-run isolation.",
+    "artifact": "agents/h-limits/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-limits",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "docker-compose.yml",
+     "README.md"
+    ],
+    "invariant": "each run must have a bounded memory budget so allocation cannot exhaust memory shared with other runs / the server",
+    "method": "local",
+    "result": "a80b830 added only ulimit -u (nproc) and ulimit -f (fsize); there is NO per-run memory bound (no ulimit -v / RLIMIT_AS, no per-run cgroup). Under a container memory cgroup (fixture 512m) the offending run is OOM-killed and the server + a victim run survive, so the memory dimension is self-limiting ONLY because a container cgroup exists. compose sets mem_limit 2g (shared container-wide), but the README `docker run` command sets no --memory -> a single run reaches host memory and the host OOM killer (deployment-dependent).",
+    "artifact": "agents/h-limits/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-limits",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/mcp_server.py",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "concurrent-run admission: an unauthenticated caller must not be able to monopolize the shared worker pool that services all clients",
+    "method": "source",
+    "result": "run_python_code is a sync tool run via fastmcp call_sync_fn_in_threadpool -> anyio.to_thread.run_sync with the DEFAULT anyio capacity limiter of 40 (anyio _asyncio.py:3038); FastMCP/uvicorn do not override it. Each execution holds a worker thread for the whole run (proc.wait up to code_timeout_seconds, code_executor.py:160). There is no app-level semaphore, per-caller cap, or admission control (mcp_server.py registers a single tool, stateless). So up to 40 concurrent long runs from one principal can occupy every worker thread, delaying all other clients' tool calls up to ~code_timeout_seconds. Whether the streamable-http transport actually dispatches that many truly-concurrent thread executions per attacker is a runtime property not observable from source alone -> raised as needs_validation.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-limits",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "returned-output disk usage per run is bounded (ulimit -f) so a run cannot fill the run dir unboundedly",
+    "method": "source",
+    "result": "Covered/adequate for this unit: cmd sets ulimit -f 97656 (~100MB) per run (code_executor.py:242-243), and _collect_output_files enforces MAX_OUTPUT_FILE_BYTES (100MB/file) and MAX_TOTAL_OUTPUT_FILE_BYTES (200MB cumulative) (code_executor.py:200-204). ulimit -f is per-process (per run) so this dimension is bounded; the server-side read/cardinality concerns are peer-owned (u12).",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-limits",
+    "reviewed_paths": [
+     "README.md",
+     "docker-compose.yml",
+     "docker-entrypoint.sh",
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "A run that hits its quota should fail only itself. The server must always keep headroom to start runs for other clients. Concretely: (per-run cap \u00d7 maximum concurrent runs) + server overhead must stay below the container pid and memory limits, or each run must get its own cgroup (pids.max/memory.max). Extra runs beyond that are rejected or queued.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor.py:_run_sandboxed/no-per-run-resource-limits: Per-run check (agents/ver-limits/artifacts/evidence1.txt): the attacker stopped at 27 forks with EAGAIN from its own cap of 30. The concurrent victim ran as uid 999 with Max processes 30 and forked all 10 children. So the cap is per run, not a per-uid pool. Starvation check (agents/ver-limits/artifacts/evidence2.txt): attacker 1 hit its own cap at 57 forks. Attacker 2 got 21 forks before EAGAIN from the container pid cgroup. The victim run returned status='failure', 'Tool run failed. Do not call this tool again, inform the user that it is broken.', with BlockingIOError [Errno 11] raised in the server's own subprocess.Popen. The run after the attack returned status='success', 'recovered'. The hunter's single-run result (102 forks, victim failed) came from the fixture's 128-pid cgroup being below th",
+    "artifact": "agents/ver-limits/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "ver-admission",
+    "reviewed_paths": [
+     "docker-compose.yml",
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "One lower-trust caller should not be able to take every execution slot on a shared multi-user server. Concurrent runs should be limited per principal or per client, with a clear busy response, and there should be spare capacity so other clients' calls are not silently queued behind one caller's long-running jobs.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor.py:run_python_code/no-concurrent-run-admission-shared-anyio-threadpool: Local test (agents/ver-admission/artifacts/evidence1.txt): real run_mcp/FastMCP HTTP server and real run_python_code, with only the sandbox subprocess replaced by an 8 s sleep. The server's default thread limiter had total_tokens=40. With 39 attackers the victim took 8.02 s, its own run only. With 40 attackers it took 14.62 s, about 6.6 s of that queued behind attacker slots. With real srt+bwrap (Docker-equivalent, uid 999), one sleeping run completed successfully with a peak of 21 uid-999 tasks (evidence2.txt). 40 real concurrent srt runs were not launched because of the local sandbox pids limit of 128.",
+    "artifact": "agents/ver-admission/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor.py:_run_sandboxed/no-per-run-resource-limits",
+   "code_executor.py:run_python_code/no-concurrent-run-admission-shared-anyio-threadpool"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.py:_run_sandboxed/no-per-run-resource-limits"
+  ],
+  "hardening": [
+   "code_executor.py:242-243 ulimit -u 256 is per-uid; document that it is a shared pool and prefer a per-run cgroup (PidsMax) or distinct uid per run for real per-run isolation.",
+   "No per-run memory limit exists (only nproc + fsize ulimits); add RLIMIT_AS per run so a run cannot rely on the container cgroup OOM killer, and add --memory/--pids-limit to the README `docker run` command (only docker-compose.yml sets them).",
+   "run_python_code has no application-level concurrency/admission control; consider a bounded semaphore or per-caller cap rather than relying on the framework's default 40-thread anyio pool.",
+   "A victim run failing due to shared-pool exhaustion is reported to the client as 'Tool run failed. Do not call this tool again... it is broken' (code_executor.py:255-263) with a full traceback \u2014 a transient resource error is presented as a permanent breakage and leaks a server-side traceback."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code%20in%20CLI%20mode%20on%20macOS%20%28srt%20Seatbelt%20backend%2C%20user%3DNone%29::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23_write_srt_settings%20denyRead%28working_directory.resolve%28%29%29%2BallowRead%28%27.%27%29%20and%20same-uid%20process%20isolation%20under%20Seatbelt::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code in CLI mode on macOS (srt Seatbelt backend, user=None)",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#_write_srt_settings denyRead(working_directory.resolve())+allowRead('.') and same-uid process isolation under Seatbelt",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code in CLI mode on macOS (srt Seatbelt backend, user=None)",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#_write_srt_settings denyRead(working_directory.resolve())+allowRead('.') and same-uid process isolation under Seatbelt",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/utils/settings.py",
+   "default_srt_settings.json",
+   "README.md"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   },
+   {
+    "block": "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+    "reason": "host CLI mode, no container runtime"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code"
+   }
+  ],
+  "label": "u15",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-srtpaths",
+  "reviewed_paths": [
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-srtpaths",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "default_srt_settings.json"
+    ],
+    "invariant": "On macOS Seatbelt, denyRead(working_directory.resolve()) plus allowRead('.') hides sibling runs and re-allows only the run's own directory, with no symlink or relative-path mismatch",
+    "method": "source",
+    "result": "Read-only review of the installed srt 0.0.64 (macos-sandbox-utils.js generateReadRules and sandbox-utils.js normalizePathForSandbox). srt emits (allow file-read*), then (deny file-read* (subpath <resolved working dir>)), then (allow file-read* (subpath <cwd>)), where '.' is resolved against the srt process cwd = code_path, which getcwd returns as a real path. denyRead uses working_directory.resolve(), so the /tmp to /private/tmp symlink cannot split the two rules. The only broader re-allow is file-read-metadata on directories: other runs' directories can be stat'ed but not listed or read, and uuid4 run names cannot be guessed. Writes are limited to the '.' subpath.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-srtpaths",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/cli.py"
+    ],
+    "invariant": "With user=None, sandboxed code (same uid as the server) cannot inspect or signal the server or other runs' processes, e.g. to read the server environment",
+    "method": "source",
+    "result": "The srt 0.0.64 Seatbelt profile allows process-info* and signal only for (target same-sandbox), and each run is its own srt/sandbox-exec instance, so the server process and other runs are out of scope. The env passed is only PATH and CLAUDE_CODE_TMPDIR. Host file reads outside working_directory stay allowed by default_srt_settings (empty denyRead). The README 'Open security concerns' section documents that as the operator's responsibility, so it is not a code-level boundary failure. The rejected Seatbelt POSIX-IPC claim was not re-raised.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "_write_srt_settings creates a new /tmp/srt-settings-*.json per CodeExecutor instance with mkstemp and never deletes it. This leaks temp files per instance; the files hold no secrets.",
+   "In CLI mode without --path_to_python, the interpreter is working_directory/.venv/bin/python (cli.py:110), which sits inside the denyRead(working_directory) region. On macOS Seatbelt the venv site-packages may not be readable inside the sandbox. This is a functional issue, not a security one; the fix is to keep the venv outside working_directory or add it to allowRead.",
+   "Docker weaker-nested mode (local observation): sandboxed code sees the container /proc, including other runs' cmdlines with their run-dir uuids and the server's cmdline, and /tmp lists other runs' claude-http-*.sock proxy sockets. /dev/shm is writable. These belong to the peer units on srt default write/IPC allowances and on the network proxy, and are recorded here only for them."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::default_srt_settings.json%23srt%20filesystem%2Fnetwork%20policy%20and%20code_executor.py%20subprocess%20identity%2Fenv::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "default_srt_settings.json#srt filesystem/network policy and code_executor.py subprocess identity/env",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "default_srt_settings.json#srt filesystem/network policy and code_executor.py subprocess identity/env",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/cli.py",
+   "Dockerfile",
+   "docker-entrypoint.sh"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "AI-AND-LLM.md#Core discipline",
+   "AI-AND-LLM.md#Excessive agency and confused-deputy authority",
+   "AI-AND-LLM.md#Sensitive context extraction",
+   "AI-AND-LLM.md#Universal moves",
+   "AI-AND-LLM.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u3",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-srtpaths",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-srtpaths",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "default_srt_settings.json",
+     "Dockerfile"
+    ],
+    "invariant": "A sandboxed run cannot list, read or modify another concurrent run's directory under working_directory: _write_srt_settings adds denyRead(working_directory.resolve()) and allowRead('.') and srt/bwrap enforces it with the run dir as the only re-allowed, writable path",
+    "method": "local",
+    "result": "Docker-mode reproduction (srt 0.0.64, bwrap, enableWeakerNestedSandbox=true, user=nonroot): generated settings denyRead ['/scratch/wd'], allowRead ['.'], allowWrite ['.']. Concurrent run A saw only its own uuid dir in the working dir (tmpfs over the denied dir), could read its own code.py and write its own output/, could not see run B's dir; /proc/<B pid>/cwd and /root were PermissionError because unshare --user puts each run in its own user namespace; run B's output was unchanged. Writes to the working dir outside the run dir went into the ephemeral tmpfs.",
+    "artifact": "agents/h-srtpaths/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-srtpaths",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Revalidation of the run-2 fix for code_executor.py:_write_srt_settings/srt-default-write-paths-shared-across-runs: srt honours the added denyWrite entries over its own implicit write paths, and CLAUDE_CODE_TMPDIR sends srt temp data into the run dir",
+    "method": "local",
+    "result": "From sandboxed code, writes to /tmp/claude, /home/nonroot/.npm/_logs, /home/nonroot/.claude/debug, /tmp and /home/nonroot all failed with OSError, so srt 0.0.64 honours the denyWrite additions and the fix closes that root cause on Linux/Docker. /dev/shm was still writable. That is srt's default /dev allowance, which belongs to the peer unit on srt default write/IPC allowances and was not assessed here.",
+    "artifact": "agents/h-srtpaths/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-srtpaths",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/cli.py",
+     "Dockerfile",
+     "docker-entrypoint.sh"
+    ],
+    "invariant": "Subprocess identity and environment: sandboxed code runs as settings.user with only PATH and CLAUDE_CODE_TMPDIR, and cannot read server-owned files or environment",
+    "method": "source",
+    "result": "Popen passes user=settings.user, env={PATH, CLAUDE_CODE_TMPDIR}, stdin=DEVNULL and start_new_session (code_executor.py:139-150). In Docker the server runs as root and code runs as nonroot (uid 999). cwd=/code is the working_directory, so the server source and config are covered by denyRead. The server environment (/proc/1/environ, owned by root) was not readable in the local run. The srt settings temp file (/tmp, mode 0644) holds only paths and is outside the sandbox's writable set. Nothing lets a request field override user, env, settings path or interpreter: the only tool argument is python_code, written to code.py.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.py:_write_srt_settings/srt-default-write-paths-shared-across-runs"
+  ],
+  "hardening": [
+   "_write_srt_settings creates a new /tmp/srt-settings-*.json per CodeExecutor instance with mkstemp and never deletes it. This leaks temp files per instance; the files hold no secrets.",
+   "In CLI mode without --path_to_python, the interpreter is working_directory/.venv/bin/python (cli.py:110), which sits inside the denyRead(working_directory) region. On macOS Seatbelt the venv site-packages may not be readable inside the sandbox. This is a functional issue, not a security one; the fix is to keep the venv outside working_directory or add it to allowRead.",
+   "Docker weaker-nested mode (local observation): sandboxed code sees the container /proc, including other runs' cmdlines with their run-dir uuids and the server's cmdline, and /tmp lists other runs' claude-http-*.sock proxy sockets. /dev/shm is writable. These belong to the peer units on srt default write/IPC allowances and on the network proxy, and are recorded here only for them."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23CodeExecutor::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Wildcard",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#CodeExecutor",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Wildcard"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#CodeExecutor",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Wildcard",
+  "starting_paths": [
+   "src/mcp_run_isolated_python"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Wildcard",
+  "selected_companion_blocks": [
+   "AI-AND-LLM.md#Core discipline",
+   "AI-AND-LLM.md#Tool-argument injection into a downstream sink",
+   "AI-AND-LLM.md#MCP metadata and schema as policy",
+   "AI-AND-LLM.md#Universal moves",
+   "AI-AND-LLM.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u10",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-misc",
+  "reviewed_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/logger.py",
+   "src/mcp_run_isolated_python/utils/otel.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "The model-supplied tool argument python_code must reach only the file sink code.py inside the run dir and must never be interpolated into the shell command passed to srt -c",
+    "method": "source",
+    "result": "python_code is written to code_path/code.py (code_executor.py:235-237). The command string at line 250 interpolates only the operator-set interpreter path and the server-generated uuid path, so there is no tool-argument injection into the shell. The tool schema has a single str field and the description is server-generated. No MCP metadata is trusted as policy.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Sandbox-chosen output filenames and file bytes returned via Image/Audio/File (code_executor.py:206-219) must not drive a server-side sink beyond the returned content",
+    "method": "source",
+    "result": "The filename is used only for mimetypes.guess_type and as the embedded resource name. The bytes go only to filetype.guess and base64 encoding. No path, URL, or template is built from them on the server. The content is returned to the caller who ran the code (same principal).",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/logger.py",
+     "src/mcp_run_isolated_python/utils/otel.py"
+    ],
+    "invariant": "Odd or fallback code (tempfile srt settings reuse, pwd home lookup, otel span processor, the 'Do not call this tool again' failure message) must not create a cross-principal effect",
+    "method": "source",
+    "result": "The srt settings temp file is created via mkstemp outside the working dir, is root-owned with mode 0644, and is read-only to the sandbox, which cannot modify it. The otel processor only adds span ids. The failure message can be triggered by sandbox code at will (see evidence3), but that only affects the caller's own session. Nothing reaches another principal.",
+    "artifact": null
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Dockerfile:70,73 chowns /code (including the root server's own .venv and default_srt_settings.json) and /sandbox (the interpreter venv shared by all runs) to nonroot, the same uid that runs untrusted code. Only bwrap's read-only bind stops sandboxed code from trojaning the root server or later runs. Leave these root-owned (drop --chown on the /code copy) and keep only the working directory owned by nonroot.",
+   "No .dockerignore: 'COPY . .' (Dockerfile:33) bakes .git, .claude, .idea, .jbeval, .testing, .venv and .DS_Store into the published image. The sandbox cannot read /code (denyRead), but image consumers can. Add a .dockerignore.",
+   "code_executor.py:177,240 log every submitted program and its full stdout/stderr at INFO. In multi-user deployments this keeps other users' code and results in server logs. Consider logging at DEBUG or logging hashes and sizes only.",
+   "code_executor.py:261 returns the full traceback.format_exc() to the unauthenticated client. Today it only exposes install and run-dir paths. A generic message plus a correlation id would avoid future leaks.",
+   "The per-process srt settings file from tempfile.mkstemp (code_executor.py:106) is never deleted, so one /tmp file is leaked per server start."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23error%2C%20traceback%20and%20logging%20paths::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#error, traceback and logging paths",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#error, traceback and logging paths",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/utils/logger.py",
+   "src/mcp_run_isolated_python/cli.py"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+  "selected_companion_blocks": [],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u6",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-misc",
+  "reviewed_paths": [
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/utils/logger.py",
+   "src/mcp_run_isolated_python/utils/settings.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/logger.py"
+    ],
+    "invariant": "Sandbox-controlled code text and stdout/stderr logged at INFO (code_executor.py:177,240) must not inject raw terminal escapes or forged log lines into the operator's server log stream",
+    "method": "local",
+    "result": "structlog ConsoleRenderer repr()-renders str and dict values: the code containing ESC bytes and newlines, and sandbox output that printed an ANSI sequence plus a forged '[info ]' line, show up only as escaped \\x1b / \\n inside quoted values. There is no log forging or terminal-escape injection.",
+    "artifact": "agents/h-misc/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "The exception path (code_executor.py:255-263 returns traceback.format_exc() to the client) must not disclose server-only data or data from other runs when sandbox code forces a failure",
+    "method": "local",
+    "result": "Sandbox code replaced output/ with a symlink to /etc. O_NOFOLLOW raised NotADirectoryError and the returned traceback contained only the server package path and the run's own path, which the sandbox already knows. No file contents were leaked, /etc was not followed, and cleanup still removed the run dir. The Rich locals dump goes only to the server log.",
+    "artifact": "agents/h-misc/artifacts/evidence3.txt"
+   },
+   {
+    "agent_id": "h-misc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/settings.py",
+     "src/mcp_run_isolated_python/cli.py"
+    ],
+    "invariant": "Logged settings (settings.model_dump at code_executor.py:240) and startup logs (cli.py:113-124) must not contain credentials",
+    "method": "source",
+    "result": "CodeSandboxSettings holds only timeout, user name, and paths. cli.py logs the dependency lists and the default srt settings content, which has no secrets. The srt per-run proxy credential is created inside srt and is never logged by this code. The Popen env is only PATH and CLAUDE_CODE_TMPDIR, so no server env reaches logs or the sandbox.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-logesc",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/utils/logger.py"
+    ],
+    "invariant": "Values from the sandbox or the tool call should appear in operator logs only in escaped form, so they can never act as terminal control sequences.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor._collect_output_files:sandbox-controlled-output-name-logged-raw-terminal-escape-injection: Three values appeared on server stdout as raw, unescaped control bytes. name= showed 033 c (RIS terminal reset) for the symlink. name= showed 033 [ 1 A 033 [ 2 K VERLOGESC 033 ] 0 ; VTITLE \\a for the directory. code= showed # 033 ] 0 ; CODETITLE \\a. The first code string, which contains spaces and newlines, was repr-quoted. Evidence: agents/ver-logesc/artifacts/evidence1.txt. The impact on a live terminal was not tested; only the raw bytes on the log stream were observed.",
+    "artifact": "agents/ver-logesc/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Dockerfile:70,73 chowns /code (including the root server's own .venv and default_srt_settings.json) and /sandbox (the interpreter venv shared by all runs) to nonroot, the same uid that runs untrusted code. Only bwrap's read-only bind stops sandboxed code from trojaning the root server or later runs. Leave these root-owned (drop --chown on the /code copy) and keep only the working directory owned by nonroot.",
+   "No .dockerignore: 'COPY . .' (Dockerfile:33) bakes .git, .claude, .idea, .jbeval, .testing, .venv and .DS_Store into the published image. The sandbox cannot read /code (denyRead), but image consumers can. Add a .dockerignore.",
+   "code_executor.py:177,240 log every submitted program and its full stdout/stderr at INFO. In multi-user deployments this keeps other users' code and results in server logs. Consider logging at DEBUG or logging hashes and sizes only.",
+   "code_executor.py:261 returns the full traceback.format_exc() to the unauthenticated client. Today it only exposes install and run-dir paths. A generic message plus a correlation id would avoid future leaks.",
+   "The per-process srt settings file from tempfile.mkstemp (code_executor.py:106) is never deleted, so one /tmp file is leaked per server start."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23output%20directory%20file%20reads%20by%20the%20server%20process%20%28guess%20%2B%20Image%2FAudio%2FFile%29::src%2Fmcp_run_isolated_python::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Unbounded%20buffering%20and%20cardinality",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#output directory file reads by the server process (guess + Image/Audio/File)",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#output directory file reads by the server process (guess + Image/Audio/File)",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "default_srt_settings.json",
+   "Dockerfile",
+   "docker-compose.yml"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+  "selected_companion_blocks": [
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Worker, pool, and priority starvation",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Reachable fatal error or deadlock",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#File descriptor, handle, and temporary-resource leaks",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Decompression and representation amplification",
+    "reason": "server does not decode images/audio; filetype.guess reads a small header; base64 expansion is covered under unbounded buffering"
+   },
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Superlinear parsing, matching, or evaluation",
+    "reason": "no server-side parsing of output-file content"
+   }
+  ],
+  "label": "u12",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-output",
+  "reviewed_paths": [
+   "docker-compose.yml",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Revalidate run-2 fix for no-aggregate-output-file-bound: returned output must be bounded in aggregate (bytes AND entry count / serialized size), and server-side collection work must be bounded.",
+    "method": "local",
+    "result": "Real srt+bwrap (server root, code nonroot, 30 s timeout): sandbox created zero-byte files named with 204 chars; within the timeout 40,940 files existed; the server then spent 21.14 s AFTER the code timeout collecting them and returned 40,941 content items (13,551,140 bytes of JSON) with server RSS growing 55.7 MB, while the 200 MB byte budget counted 0 bytes. The fix bounds only file data bytes; entry count, names and per-item overhead are unbounded, and collection runs outside the code timeout.",
+    "artifact": "agents/h-output/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Amplification of returned bytes stays near the 200 MB raw budget.",
+    "method": "local",
+    "result": "5 x 9 MiB PNG-headed files (47 MB raw) -> 62,915,085 bytes JSON and +100.7 MB server RSS (~2.1x) before FastMCP's own response serialization; a full 200 MB budget therefore costs roughly 430 MB+ per request. Within the owner-chosen design budget; recorded as hardening.",
+    "artifact": "agents/h-output/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "docker-compose.yml",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "Source-visible upstream bounds on the collection cost.",
+    "method": "source",
+    "result": "No entry-count cap, no deadline on _collect_output_files, and no FastMCP response-size cap. The only outer bound is compose mem_limit 2g (compose deployments only). ulimit -f limits per-file size, not inode count.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-outagg",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "Returned output should be bounded in aggregate by entry count and total serialized size (including names and encoding overhead), not just raw data bytes, and server-side collection should stop at a fixed budget and not run unbounded after the code timeout, so one run cannot make the shared server do unbounded work or hold memory past its timeout.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor._collect_output_files:no-aggregate-output-file-bound: Independently reproduced (agents/ver-outagg/artifacts/evidence1.txt). code_timeout_seconds=8: 9,598 zero-byte files created; _collect_output_files then ran 9.82 s AFTER the code timeout (tool call wall 21.4 s vs 8 s advertised timeout); 9,598 content items returned; 3,176,938 JSON bytes; server RSS grew 14,426,112 bytes; 0 bytes charged to the 200 MB budget; run dir removed afterwards. Consistent with h-output evidence1 on a faster filesystem: 40,940 files, 21.14 s post-timeout collection, 40,941 items, 13,551,140 JSON bytes, +55,717,888 RSS, 0 bytes charged. Server takedown was not attempted; the residual is a shared worker held well past the timeout plus tens of MB per request, scaling with fs speed and concurrency.",
+    "artifact": "agents/ver-outagg/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor._collect_output_files:no-aggregate-output-file-bound"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor._collect_output_files:no-aggregate-output-file-bound"
+  ],
+  "hardening": [
+   "Base64/JSON amplification: 47 MB of returned PNG data cost 62.9 MB of JSON and +100.7 MB server RSS before FastMCP serialization (evidence2), so the 200 MB budget means roughly 430 MB+ per request. Combined with unbounded concurrent requests (peer-owned admission unit) and compose mem_limit 2g, a few parallel requests can exhaust memory. Consider a much lower total return budget.",
+   "Files that would go over the per-file or total budget are still read into memory in full (up to 100 MB each) before being skipped (code_executor.py:200-203). Use fstat st_size to skip them without reading.",
+   "A symlinked output/ directory makes os.open raise ELOOP, which returns a full traceback to the client (code_executor.py:186, 261). This is harmless but noisy; handle it as an empty output instead."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23run_python_code%20output%20directory%20collection::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#run_python_code output directory collection",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Resource and file handling"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#run_python_code output directory collection",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Resource and file handling",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "default_srt_settings.json",
+   "Dockerfile",
+   "docker-entrypoint.sh"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Resource and file handling",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u1",
+  "prior_status": "prior_covered_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "covered",
+  "agent_id": "h-output",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Output collection must never read a file outside the run's output dir or one the sandbox could not itself read (symlink / hardlink / special-file / replaced-dir deputy reads by the root server).",
+    "method": "source",
+    "result": "output dir opened O_DIRECTORY|O_NOFOLLOW (line 186); entries enumerated and opened relative to dir_fd with O_NOFOLLOW|O_NONBLOCK (188-190), so symlinked leaf or symlinked output dir fail with ELOOP (leaf skipped; dir case raises -> traceback returned, cleanup still in finally); fstat on the same fd requires S_ISREG and st_nlink==1 (194-195) and the read uses that fd (199-200), so there is no check/use gap; FIFOs/sockets are skipped without blocking. code_path's parent (working_directory, e.g. /code in Docker, nonroot-owned) is not writable inside srt/bwrap (allowWrite only '.'), so the sandbox cannot swap the run dir itself. Hardlinks to foreign files are blocked by EXDEV across bwrap bind mounts, protected_hardlinks (userns caps from unshare do not apply to unmapped root inodes), and the nlink==1 check. On Linux the bwrap pid namespace + --die-with-parent means no sandbox writer is alive during collection. No bypass found.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-output",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py",
+     "Dockerfile",
+     "docker-entrypoint.sh",
+     "default_srt_settings.json"
+    ],
+    "invariant": "Privileged helper (root server in Docker) must not let sandboxed code select files, users or paths for privileged operations during output return.",
+    "method": "source",
+    "result": "The only sandbox-controlled selector is the entry name inside output/, resolved relative to the retained dir_fd; name is only echoed back as File name/mime guess to the same requester. mcp_server.py passes no extra arguments. No confused-deputy path on this boundary.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-outagg",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "Returned output should be bounded in aggregate by entry count and total serialized size (including names and encoding overhead), not just raw data bytes, and server-side collection should stop at a fixed budget and not run unbounded after the code timeout, so one run cannot make the shared server do unbounded work or hold memory past its timeout.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor._collect_output_files:no-aggregate-output-file-bound: Independently reproduced (agents/ver-outagg/artifacts/evidence1.txt). code_timeout_seconds=8: 9,598 zero-byte files created; _collect_output_files then ran 9.82 s AFTER the code timeout (tool call wall 21.4 s vs 8 s advertised timeout); 9,598 content items returned; 3,176,938 JSON bytes; server RSS grew 14,426,112 bytes; 0 bytes charged to the 200 MB budget; run dir removed afterwards. Consistent with h-output evidence1 on a faster filesystem: 40,940 files, 21.14 s post-timeout collection, 40,941 items, 13,551,140 JSON bytes, +55,717,888 RSS, 0 bytes charged. Server takedown was not attempted; the residual is a shared worker held well past the timeout plus tens of MB per request, scaling with fs speed and concurrency.",
+    "artifact": "agents/ver-outagg/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [],
+  "unresolved": [],
+  "prior_fingerprints": [],
+  "hardening": [
+   "Base64/JSON amplification: 47 MB of returned PNG data cost 62.9 MB of JSON and +100.7 MB server RSS before FastMCP serialization (evidence2), so the 200 MB budget means roughly 430 MB+ per request. Combined with unbounded concurrent requests (peer-owned admission unit) and compose mem_limit 2g, a few parallel requests can exhaust memory. Consider a much lower total return budget.",
+   "Files that would go over the per-file or total budget are still read into memory in full (up to 100 MB each) before being skipped (code_executor.py:200-203). Use fstat st_size to skip them without reading.",
+   "A symlinked output/ directory makes os.open raise ELOOP, which returns a full traceback to the client (code_executor.py:186, 261). This is harmless but noisy; handle it as an empty output instead."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23server-side%20filesystem%20operations%20on%20the%20sandbox-writable%20run%20directory%20%28_make_run_dir%20chown%2C%20iterdir%20of%20output%2F%20itself%2C%20shutil.rmtree%29::src%2Fmcp_run_isolated_python::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#server-side filesystem operations on the sandbox-writable run directory (_make_run_dir chown, iterdir of output/ itself, shutil.rmtree)",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#server-side filesystem operations on the sandbox-writable run directory (_make_run_dir chown, iterdir of output/ itself, shutil.rmtree)",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "default_srt_settings.json",
+   "Dockerfile"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Resource and file handling",
+  "selected_companion_blocks": [
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+   "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+    "reason": "FIFO/large/many-file output reads owned by blocked unit u12"
+   },
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   }
+  ],
+  "label": "u13",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-cleanup",
+  "reviewed_paths": [
+   "Dockerfile",
+   "default_srt_settings.json",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/direct_use.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "Dockerfile"
+    ],
+    "invariant": "_make_run_dir's path-based mkdir+chown (run as root in Docker) cannot be redirected by sandboxed code",
+    "method": "source",
+    "result": "The uuid4 run dir and its output/ subdir are created and chowned before the run's sandbox starts. Concurrent sandboxes can write only to their own cwd (allowWrite ['.']) and cannot read the working directory (denyRead of the working dir, re-allow of '.' only). No lower-trust writer can race the chown. Covered.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Root-run cleanup (chmod walk + rmtree) never acts outside the run dir via symlinks and always completes",
+    "method": "local",
+    "result": "shutil.rmtree avoids symlink attacks (fd-based, avoids_symlink_attacks=True in the image's Python 3.13.15). The chmod walk skips static symlinks. Its is_symlink-then-path-chmod pair is a check/use race, but on Linux no sandbox process survives to exploit it (pid namespace). The walk is not robust to sandbox-controlled depth: an ENAMETOOLONG from is_symlink escapes and skips rmtree, and an EMFILE inside rmtree is silently ignored. The run dir persists (same finding as the other unit, evidence1).",
+    "artifact": "agents/h-cleanup/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/direct_use.py"
+    ],
+    "invariant": "Library path (CodeSandbox.eval) uses the same cleanup",
+    "method": "source",
+    "result": "direct_use.py routes to the same CodeExecutor.run_python_code, so the same finally-block _remove_run_dir applies and the same deep-tree failure is inherited. The output-dir reads themselves belong to peer units.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Sandbox write scope limits where cleanup-defeating state can be created",
+    "method": "source",
+    "result": "allowWrite ['.'] (the run dir) lets the sandbox create arbitrary depth and file counts under the run dir. ulimit -f limits only the size of each file, not the total, so everything left behind by a failed cleanup is bounded only by the timeout and disk speed.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-rmlock",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "The run directory and everything the sandbox wrote are always removed at the end of each run, whatever tree shape or depth the sandbox created. A cleanup error must never skip the removal or replace the tool result.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir: Depth-300 control: status success, no entry left. Each depth-2100 call: the sandbox code finished with success, but run_python_code raised 'OSError [Errno 36] File name too long'. The traceback ran through code_executor.py:267 -> code_executor.py:66 (is_symlink -> lstat -> os.stat), and each call left its run dir behind. Depth-900 call: the tool returned success, the server logged 'Could not fully remove run directory', and the run dir was left behind. After the runs, 3 run dirs remained (du 3620 bytes with the 1000-byte payload files) (agents/ver-rmlock/artifacts/evidence1.txt). Monkeypatching in the proposed remediation removed both the depth-2100 and depth-900 trees (0 entries left). In that run, os.fwalk itself raised EMFILE, and the try/except plus rm -rf fallback did the removal (",
+    "artifact": "agents/ver-rmlock/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir"
+  ],
+  "hardening": [
+   "_remove_run_dir checks is_symlink() and then calls a path-based Path.chmod, which follows symlinks: a TOCTOU pair run as root in Docker. On Linux no sandbox process survives to race it (bwrap --unshare-pid --die-with-parent). On macOS/Seatbelt a descendant that outlives the run (peer-owned detached-work unit) could swap a subdir for a symlink and get the server to chmod 0700 an arbitrary same-user directory. The fd-relative O_NOFOLLOW+fchmod walk in the remediation closes this.",
+   "_write_srt_settings creates one srt-settings-*.json in /tmp per CodeExecutor that is never deleted. It is bounded to one per process, so this is not a finding.",
+   "If _make_run_dir raises after mkdir (for example chown fails for a misconfigured user), code_path is still None and the dir is not removed. Only the operator can trigger this.",
+   "CLI mode on Linux uses the same path-based cleanup, so the deep-tree residual applies there too (same uid, so the sandbox can additionally chmod 000). This was not separately executed."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fcode_executor.py%23subprocess.run%20timeout%20and%20cleanup::src%2Fmcp_run_isolated_python::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23File%20descriptor%2C%20handle%2C%20and%20temporary-resource%20leaks",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/code_executor.py#subprocess.run timeout and cleanup",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#File descriptor, handle, and temporary-resource leaks"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/code_executor.py#subprocess.run timeout and cleanup",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#File descriptor, handle, and temporary-resource leaks",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "ordinary_attack_class_block": null,
+  "selected_companion_blocks": [
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#File descriptor, handle, and temporary-resource leaks",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Detached work after cancellation",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Worker, pool, and priority starvation",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Reachable fatal error or deadlock",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+   "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u5",
+  "prior_status": "prior_confirmed_changed_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "h-cleanup",
+  "reviewed_paths": [
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "Every run's run directory is removed at the end of the run, even when sandboxed code shapes the tree (run-2 rmtree-ignore-errors-sandbox-locked-dir fix revalidation)",
+    "method": "local",
+    "result": "The a80b830 unlock-then-rmtree fix works for shallow locked trees (a depth-300 control was removed). It fails on deep trees. Sandboxed code (uid 999, real srt+bwrap, Docker mode) made a 2100-level 'd/d/...' tree with dir_fd-relative mkdir and wrote a 1 MB file at the bottom. In _remove_run_dir, Path.is_symlink() (code_executor.py:66) raised ENAMETOOLONG outside contextlib.suppress. The OSError escaped the finally block of run_python_code, and shutil.rmtree never ran. Three runs left three run dirs (3,000,945 bytes) behind. Separately, with nofile=512, trees 700-900 levels deep (below PATH_MAX) were also left behind: Python 3.13 rmtree keeps one fd per level, and ignore_errors hides the resulting EMFILE. GNU rm -rf removed the depth-2100 tree in the same container.",
+    "artifact": "agents/h-cleanup/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "srt's temporary resources for a run stay inside the run dir and are removed with it, including on SIGKILL timeout (the CLAUDE_CODE_TMPDIR part of the fix)",
+    "method": "local",
+    "result": "srt's own host-side temp artifacts ignore CLAUDE_CODE_TMPDIR. They are created in node's os.tmpdir() (/tmp, because TMPDIR is not in the Popen env): claude-empty-* dirs, claude-http-*.sock and srt-mux-*.sock. They are never removed. Two normal runs left 6 new /tmp entries and three timed-out runs left 9. Running srt directly with TMPDIR=<run dir> put the artifacts in the run dir instead, and the /tmp entry count stayed at 111.",
+    "artifact": "agents/h-cleanup/artifacts/evidence2.txt"
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "On timeout, all sandbox processes and reader threads are terminated and do not outlive the run on Linux",
+    "method": "source",
+    "result": "On timeout, _run_sandboxed calls os.killpg(proc.pid, SIGKILL) on its own session and then proc.wait(). The srt image source (linux-sandbox-utils.js:980,1075) always passes bwrap --new-session --die-with-parent --unshare-pid, including with enableWeakerNestedSandbox. Once srt/bwrap exits, every sandbox process in the pid namespace dies, so no process keeps the stdout/stderr pipes open. The daemon reader threads get EOF, and join(timeout=5) is bounded. The in-sandbox unshare --user --ipc does not create a pid namespace, so it cannot escape this. The macOS/Seatbelt descendant case belongs to the peer unit.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "A cancelled or disconnected client request does not leave unbounded detached work",
+    "method": "source",
+    "result": "run_python_code is a sync tool that FastMCP runs in a worker thread. After a client disconnects, the work keeps running only until code_timeout_seconds, then the run dir is cleaned up. Retention is bounded by the timeout. Worker admission and concurrency belong to the peer starvation unit.",
+    "artifact": null
+   },
+   {
+    "agent_id": "h-cleanup",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py"
+    ],
+    "invariant": "No fd or handle leaks on the output-collection path and the pre-check path",
+    "method": "source",
+    "result": "In _collect_output_files, dir_fd is closed in a finally block. Each entry fd is either closed explicitly (non-regular or hard-linked entries) or handed to os.fdopen inside a with block. An os.open failure is caught before any fd exists. The pre-check dir is removed in a finally block, and the settings temp file is created once per process. No repeatable fd leak was found.",
+    "artifact": null
+   },
+   {
+    "agent_id": "ver-srttmp",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "All of srt's temporary resources for a run are confined to a per-run location that is removed when the run ends, including when the run is killed on timeout.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor._run_sandboxed:srt-host-tmp-artifacts-leak-per-run: Two normal runs left 7 new /tmp entries: 4 claude-empty-* dirs (mode 0700), 1 claude-http-*.sock and 2 srt-mux-*.sock. One timed-out run left 4 more: 2 claude-empty-*, 1 claude-http-*.sock and 1 srt-mux-*.sock. The working directory was empty afterwards. Sandboxed code could list these names in /tmp but got OSError when it tried to write there. With TMPDIR set to the run dir, the same 3 runs added 0 /tmp entries and no run dirs were left (agents/ver-srttmp/artifacts/evidence1.txt, evidence2.txt).",
+    "artifact": "agents/ver-srttmp/artifacts/evidence1.txt"
+   },
+   {
+    "agent_id": "ver-rmlock",
+    "reviewed_paths": [
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py"
+    ],
+    "invariant": "The run directory and everything the sandbox wrote are always removed at the end of each run, whatever tree shape or depth the sandbox created. A cleanup error must never skip the removal or replace the tool result.",
+    "method": "local",
+    "result": "Verifier decision confirmed for code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir: Depth-300 control: status success, no entry left. Each depth-2100 call: the sandbox code finished with success, but run_python_code raised 'OSError [Errno 36] File name too long'. The traceback ran through code_executor.py:267 -> code_executor.py:66 (is_symlink -> lstat -> os.stat), and each call left its run dir behind. Depth-900 call: the tool returned success, the server logged 'Could not fully remove run directory', and the run dir was left behind. After the runs, 3 run dirs remained (du 3620 bytes with the 1000-byte payload files) (agents/ver-rmlock/artifacts/evidence1.txt). Monkeypatching in the proposed remediation removed both the depth-2100 and depth-900 trees (0 entries left). In that run, os.fwalk itself raised EMFILE, and the try/except plus rm -rf fallback did the removal (",
+    "artifact": "agents/ver-rmlock/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir",
+   "code_executor._run_sandboxed:srt-host-tmp-artifacts-leak-per-run"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "code_executor.run_python_code:rmtree-ignore-errors-sandbox-locked-dir"
+  ],
+  "hardening": [
+   "_remove_run_dir checks is_symlink() and then calls a path-based Path.chmod, which follows symlinks: a TOCTOU pair run as root in Docker. On Linux no sandbox process survives to race it (bwrap --unshare-pid --die-with-parent). On macOS/Seatbelt a descendant that outlives the run (peer-owned detached-work unit) could swap a subdir for a symlink and get the server to chmod 0700 an arbitrary same-user directory. The fd-relative O_NOFOLLOW+fchmod walk in the remediation closes this.",
+   "_write_srt_settings creates one srt-settings-*.json in /tmp per CodeExecutor that is never deleted. It is bounded to one per process, so this is not a finding.",
+   "If _make_run_dir raises after mkdir (for example chown fails for a misconfigured user), code_path is still None and the dir is not removed. Only the operator can trigger this.",
+   "CLI mode on Linux uses the same path-based cleanup, so the deep-tree residual applies there too (same uid, so the sandbox can additionally chmod 000). This was not separately executed."
+  ]
+ },
+ {
+  "coverage_id": "src%2Fmcp_run_isolated_python%2Fmcp_server.py%23Tool%20run_python_code::src%2Fmcp_run_isolated_python%2Fmcp_server.py%23mcp.run_async%20HTTP%20transport::src%2Fmcp_run_isolated_python::ATTACK-CLASSES.md%23Access%20control",
+  "canonical_refs": {
+   "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+   "boundary": "src/mcp_run_isolated_python/mcp_server.py#mcp.run_async HTTP transport",
+   "subsystem": "src/mcp_run_isolated_python",
+   "attack_class": "ATTACK-CLASSES.md#Access control"
+  },
+  "surface": "src/mcp_run_isolated_python/mcp_server.py#Tool run_python_code",
+  "boundary": "src/mcp_run_isolated_python/mcp_server.py#mcp.run_async HTTP transport",
+  "subsystem": "src/mcp_run_isolated_python",
+  "attack_class": "ATTACK-CLASSES.md#Access control",
+  "starting_paths": [
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/cli.py",
+   "docker-entrypoint.sh",
+   "docker-compose.yml"
+  ],
+  "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+  "selected_companion_blocks": [
+   "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+   "WEB-PROTOCOL-AND-AUTH.md#Host and forwarded-header trust",
+   "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+   "WEB-PROTOCOL-AND-AUTH.md#Validation rules",
+   "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+   "CLOUD-AND-DEPLOYMENT.md#Unexpected service or management-plane reachability",
+   "CLOUD-AND-DEPLOYMENT.md#Universal moves",
+   "CLOUD-AND-DEPLOYMENT.md#Validation rules"
+  ],
+  "excluded_blocks": [
+   {
+    "block": "CLIENT-SIDE.md#Core discipline",
+    "reason": "no browser/DOM code in repository"
+   },
+   {
+    "block": "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+    "reason": "no persistent or multi-tenant data store; runs are ephemeral"
+   },
+   {
+    "block": "MEMORY-SAFETY-AND-BINARY.md#Core discipline",
+    "reason": "pure Python target, no native code or FFI in repo"
+   },
+   {
+    "block": "PROTOCOLS-RPC-AND-MESSAGING.md#Core discipline",
+    "reason": "JSON-RPC framing/dispatch entirely inside FastMCP; single tool, no custom routing"
+   }
+  ],
+  "label": "u4",
+  "prior_status": "prior_confirmed_same_source",
+  "attempts": [],
+  "wave": 1,
+  "status": "candidate",
+  "agent_id": "ver-httpauth",
+  "reviewed_paths": [
+   "default_srt_settings.json",
+   "docker-compose.yml",
+   "docker-entrypoint.sh",
+   "src/mcp_run_isolated_python/cli.py",
+   "src/mcp_run_isolated_python/code_executor.py",
+   "src/mcp_run_isolated_python/mcp_server.py",
+   "src/mcp_run_isolated_python/utils/settings.py",
+   "uv.lock"
+  ],
+  "local_checks": [
+   {
+    "agent_id": "ver-httpauth",
+    "reviewed_paths": [
+     "default_srt_settings.json",
+     "docker-compose.yml",
+     "docker-entrypoint.sh",
+     "src/mcp_run_isolated_python/cli.py",
+     "src/mcp_run_isolated_python/code_executor.py",
+     "src/mcp_run_isolated_python/mcp_server.py",
+     "src/mcp_run_isolated_python/utils/settings.py",
+     "uv.lock"
+    ],
+    "invariant": "Only the intended local MCP client, or authenticated clients in a network deployment, can invoke run_python_code. A localhost-bound server rejects requests whose Host/Origin is not loopback or explicitly allowlisted, and a non-loopback bind requires authentication.",
+    "method": "local",
+    "result": "Verifier decision confirmed for mcp_server.py:run_mcp/http-transport-no-auth-no-host-origin-guard: Re-reproduced on current source a80b830 with fastmcp 4.0.3 (installed default http_host_origin_protection=False). Localhost bind, foreign Host/Origin, no auth: HTTP 200, and the result output is 'VER-DUMMY-8842 999', so the code ran as uid 999 through srt plus the new unshare wrapper and returned the dummy file. 0.0.0.0 bind: HTTP 200 with the same output. Control 1 (strict protection, foreign Host): HTTP 421 Misdirected Request. Control 2 (strict protection, Host localhost): HTTP 200 with the same output, so the guard does not break legitimate loopback clients. Control 2 also shows that the Host guard alone does not stop a network peer on a 0.0.0.0 bind, because the peer can send Host: localhost, which is a DEFAULT_HOSTS entry (fastmcp/server/http.py:38). Evidence: agents/ver-httpauth/arti",
+    "artifact": "agents/ver-httpauth/artifacts/evidence1.txt"
+   }
+  ],
+  "result_fingerprints": [
+   "mcp_server.py:run_mcp/http-transport-no-auth-no-host-origin-guard"
+  ],
+  "unresolved": [],
+  "prior_fingerprints": [
+   "mcp_server.py:run_mcp/http-transport-no-auth-no-host-origin-guard"
+  ]
+ }
+]

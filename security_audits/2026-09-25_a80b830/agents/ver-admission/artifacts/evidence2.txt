@@ -1,0 +1,8 @@
+ver-admission evidence2: per-run task footprint under real srt+bwrap (sbx.py --srt, Docker-equivalent, user=nonroot uid 999)
+Harness: scratch/c.py. One real run_python_code("import time; time.sleep(6); print('ok')"):
+  result: success ok | peak uid-999 tasks during one sleeping run: 21
+A sleeping run needs no fork after `ulimit -u 256` (cmd is `ulimit ...; exec [unshare ...] python code.py`, code_executor.py:250),
+and srt/bwrap are spawned from the server (outside the ulimit), so RLIMIT_NPROC does not stop 40 concurrent sleeping runs.
+docker-compose.yml pids_limit 512 (container-wide) would bind at ~24 such runs (512/21) -> in compose deployments later runs fail
+(covered by the shared-process-ceiling finding) before the 40-thread pool saturates; CLI and README `docker run` have no such cap.
+40 real concurrent srt runs could not be launched locally (sandbox pids limit 128).

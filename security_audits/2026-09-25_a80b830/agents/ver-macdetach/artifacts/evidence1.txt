@@ -1,0 +1,52 @@
+# ver-macdetach evidence1: Linux control at a80b830 with REAL srt+bwrap (Docker deployment shape, server root, code user nonroot)
+# Launcher: python3 run-3/sbx.py ver-macdetach --srt -- 'cd /scratch && python3 t.py' (no network, ro rootfs, 512m, 128 pids, 1 cpu, 120s)
+## harness t.py
+import os, threading, time
+from pathlib import Path
+from mcp_run_isolated_python.utils.settings import CodeSandboxSettings
+from mcp_run_isolated_python.code_executor import CodeExecutor
+
+def sleepers(tag):
+    out = []
+    for p in os.listdir("/proc"):
+        if p.isdigit():
+            try:
+                c = open(f"/proc/{p}/cmdline", "rb").read().split(b"\0")
+            except OSError:
+                continue
+            if c[:2] == [b"sleep", tag.encode()]:
+                out.append(int(p))
+    return out
+
+def nfds(): return len(os.listdir("/proc/self/fd"))
+
+wd = Path("/scratch/wd"); wd.mkdir(exist_ok=True); os.chmod(wd, 0o777)
+def mk(t): return CodeExecutor(settings=CodeSandboxSettings(code_timeout_seconds=t, user="nonroot",
+    path_to_srt_settings=Path("/code/default_srt_settings.json"), working_directory=wd,
+    path_to_python_interpreter=Path("/sandbox/.venv/bin/python")))
+
+CHILD = '''
+import os, time
+if os.fork() == 0:
+    os.setsid()
+    os.execv("/bin/sleep", ["sleep", "{tag}"])
+{parent}
+print("parent exiting")
+'''
+print("baseline threads", threading.active_count(), "fds", nfds())
+t0 = time.time(); r = mk(10).run_python_code(CHILD.format(tag="51", parent="pass"))
+print("A normal-exit+setsid: %.1fs status=%s out=%r err=%r" % (time.time()-t0, r[0].status, r[0].output, (r[0].error or "")[-200:]))
+time.sleep(1)
+print("A survivors", sleepers("51"), "threads", threading.active_count(), "fds", nfds())
+t0 = time.time(); r = mk(2).run_python_code(CHILD.format(tag="52", parent="time.sleep(100)"))
+print("B timeout+setsid: %.1fs status=%s err=%r" % (time.time()-t0, r[0].status, (r[0].error or "")[-200:]))
+time.sleep(1)
+print("B survivors", sleepers("52"), "threads", threading.active_count(), "fds", nfds())
+## observed (log lines omitted)
+baseline threads 1 fds 4
+A normal-exit+setsid: 0.9s status=success out='parent exiting' err=''
+A survivors [] threads 1 fds 4
+B timeout+setsid: 2.2s status=failure err='Timed out after 2s'
+B survivors [] threads 1 fds 4
+## executed cmd: ulimit -u 256 2>/dev/null; ulimit -f 97656 2>/dev/null; exec unshare --ipc --user --map-current-user "/sandbox/.venv/bin/python" "<run>/code.py"
+## interpretation: on Linux the bwrap pid namespace (--unshare-pid/--die-with-parent) reaps setsid descendants on both paths; the a80b830 in-sandbox unshare --user does not change this. Seatbelt (macOS) not testable here.

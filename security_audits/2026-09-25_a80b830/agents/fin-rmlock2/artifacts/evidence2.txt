@@ -1,0 +1,8 @@
+host Darwin 26.6.2 (BSD chmod/rm, not target code)
+300 ('chmod', '-R', '-P', 'u+rwx', '--') rc 1 chmod: --: No such file or directory
+300 ('chmod', '-R', '-P', '--', 'u+rwx') rc 0 
+300 rm rc 0 left: False
+2100 ('chmod', '-R', '-P', 'u+rwx', '--') rc 1 chmod: --: No such file or directory
+2100 ('chmod', '-R', '-P', '--', 'u+rwx') rc 0 
+2100 rm rc 0 left: False
+outside mode 0o40500

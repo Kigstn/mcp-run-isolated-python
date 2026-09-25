@@ -1,0 +1,15 @@
+ver-srttmp independent reproduction (a80b830 source via PYTHONPATH=/target/src, real srt 0.0.64 + bwrap, Docker-mode settings, user=nonroot, timeout 3s)
+Command: python3 sbx.py ver-srttmp --srt -- 'cd /scratch && python leak.py'   (leak.py kept in scratch)
+Run 1 (sandboxed code lists /tmp and tries to write there):
+  sandbox sees in /tmp: claude-empty-27JaE0, claude-empty-AjtPT7, claude-empty-GuQUr0, claude-empty-z7Ozqx, claude-http-af514880ac3d9521.sock, srt-mux-10-0.sock, srt-mux-37-0.sock, srt-settings-jk_2ok9_.json
+  sandbox /tmp write -> OSError (sandbox cannot create /tmp entries itself)
+After 2 normal runs, new /tmp entries (server side):
+  claude-empty-9qH4Da, claude-empty-GuQUr0, claude-empty-hs5ukN, claude-empty-z7Ozqx (dirs 0700), claude-http-f5052a13aed609c5.sock, srt-mux-37-0.sock, srt-mux-66-0.sock (sockets)
+  (7 entries / 2 runs; uid shown as 0 is unreliable: /tmp is virtiofs in the harness)
+After 1 timed-out run (SIGKILL path): claude-empty-2iYV6t, claude-empty-m2SQc2, claude-http-a184b8d5b2d74d9a.sock, srt-mux-95-0.sock (4 entries)
+Run dirs left in working_directory: [] (_remove_run_dir works; the leak is outside it)
+srt source in image (/usr/local/lib/node_modules/@anthropic-ai/sandbox-runtime, version 0.0.64):
+  linux-sandbox-utils.js:367/370 join(tmpdir(), claude-http-/claude-socks-<id>.sock)
+  linux-sandbox-utils.js:714 fs.mkdtempSync(path.join(tmpdir(), 'claude-empty-'))  (no matching removal found)
+  mux-proxy.js:22 join(tmpdir(), srt-mux-<pid>-<seq>.sock)
+  sandbox-manager.js:1414/1425 rmSync of http/socks sockets exists but only on srt's own cleanup path

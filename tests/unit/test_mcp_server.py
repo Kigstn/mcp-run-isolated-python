@@ -1,4 +1,5 @@
 import asyncio
+import http.client
 import textwrap
 
 from fastmcp import Client
@@ -46,5 +47,25 @@ async def test_start_mcp_server(settings: FullSettings):
                         raise AssertionError(f"Unexpected content type: {type(content)}")
 
     # stop MCP server
+    finally:
+        process.cancel()
+
+
+async def test_foreign_host_header_is_rejected(settings: FullSettings):
+    # DNS rebinding: a website resolving its own name to 127.0.0.1 sends its name as Host
+    settings.port += 10  # the other server tests may still hold the default test port
+    process = asyncio.create_task(run_mcp(settings=settings))
+    await asyncio.sleep(5)
+    try:
+
+        def post_with_foreign_host() -> int:
+            conn = http.client.HTTPConnection("localhost", settings.port, timeout=10)
+            conn.request("POST", settings.path, body="{}", headers={"Host": "attacker.example"})
+            status = conn.getresponse().status
+            conn.close()
+            return status
+
+        # in a thread: a blocking request here would block the server running on this event loop
+        assert await asyncio.to_thread(post_with_foreign_host) == 421
     finally:
         process.cancel()

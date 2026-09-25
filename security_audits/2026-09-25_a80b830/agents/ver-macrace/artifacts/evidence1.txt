@@ -1,0 +1,12 @@
+fs base: /dev/shm/vmr source: /target/src/mcp_run_isolated_python/code_executor.py
+[2m2026-09-25T12:08:37.925597Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.926427Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.926692Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.926936Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.927061Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.927467Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.927674Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+[2m2026-09-25T12:08:37.927883Z[0m [[31m[1merror    [0m] [1mCould not fully remove run directory                        [0m [36mpath[0m=[35m/dev/shm/vmr/run[0m [36mspan[0m=[35mNone[0m
+dummy_target mode set before each iteration: 0o555
+iterations: 28 hit: (28, '0o700', 0.0)
+RESULT: race WON: _remove_run_dir chmod'ed the out-of-run-dir symlink target to 0o700

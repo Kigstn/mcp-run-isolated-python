@@ -1,0 +1,34 @@
+# Command: python3 sbx.py h-userns --srt -- 'cd /scratch && python /scratch/h.py /scratch/p5.py /scratch/p5.py' (two sequential runs)
+## p5.py
+import os
+for d in ["/tmp","/var/tmp","/dev/shm","/dev/mqueue","/home/nonroot","/tmp/claude","/run","/sandbox","/code"]:
+    p=os.path.join(d,"h_marker_x")
+    try: prev=open(p).read().strip()
+    except Exception as e: prev="none(%s)"%type(e).__name__
+    try: open(p,"w").write("seen"); w="WRITABLE"
+    except Exception as e: w="denied(%s)"%type(e).__name__
+    print(d, "prev=",prev, w)
+## output
+unshare on PATH: /usr/bin/unshare
+===== /scratch/p5.py
+/tmp prev= none(FileNotFoundError) denied(OSError)
+/var/tmp prev= none(FileNotFoundError) denied(OSError)
+/dev/shm prev= none(FileNotFoundError) WRITABLE
+/dev/mqueue prev= none(FileNotFoundError) denied(FileNotFoundError)
+/home/nonroot prev= none(FileNotFoundError) denied(OSError)
+/tmp/claude prev= none(FileNotFoundError) denied(FileNotFoundError)
+/run prev= none(FileNotFoundError) denied(OSError)
+/sandbox prev= none(FileNotFoundError) denied(OSError)
+/code prev= none(FileNotFoundError) denied(OSError)
+ERR: None
+===== /scratch/p5.py
+/tmp prev= none(FileNotFoundError) denied(OSError)
+/var/tmp prev= none(FileNotFoundError) denied(OSError)
+/dev/shm prev= none(FileNotFoundError) WRITABLE
+/dev/mqueue prev= none(FileNotFoundError) denied(FileNotFoundError)
+/home/nonroot prev= none(FileNotFoundError) denied(OSError)
+/tmp/claude prev= none(FileNotFoundError) denied(FileNotFoundError)
+/run prev= none(FileNotFoundError) denied(OSError)
+/sandbox prev= none(FileNotFoundError) denied(OSError)
+/code prev= none(FileNotFoundError) denied(OSError)
+ERR: None

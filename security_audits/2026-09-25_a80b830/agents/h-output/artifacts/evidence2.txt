@@ -1,0 +1,7 @@
+# h-output evidence2: base64/JSON amplification of returned image output files (within 200MB budget)
+# launcher: python3 sbx.py h-output --srt -- 'cd /scratch && python /scratch/h3.py 5'  (same limits/harness as evidence1)
+# payload: 5 files output/{i}.png = PNG header + 9 MiB 'A'
+sandbox stdout: created 5 9MiB png files in 0.11 s | status: success | err: 
+returned items: 6 stats: {'collect_s': 0.14, 'items': 5, 'json_bytes': 62915085, 'rss_growth_bytes_after_collect_and_dump': 100724736}
+maxrss_kb: 171388
+run dir left: []

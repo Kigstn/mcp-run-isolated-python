@@ -1,0 +1,6 @@
+ver-srttmp one-variable fix check
+Command: python3 sbx.py ver-srttmp --srt -- 'cd /scratch && python fix.py'
+fix.py: same CodeExecutor config; subprocess.Popen wrapped to add TMPDIR=<CLAUDE_CODE_TMPDIR value (run dir)> to env; nothing else changed.
+Runs: print(1) -> success 1; print(1) -> success 1; time.sleep(60) -> failure (timeout, SIGKILL)
+FIX CHECK new /tmp entries after 2 normal + 1 timeout run with TMPDIR=run dir: []
+run dirs left: []
